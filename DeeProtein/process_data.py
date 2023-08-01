@@ -2,17 +2,22 @@
 Preprocess the data to train a DeeProtein model
 """
 import argparse
-from DatasetGenerator import DatasetGenerator
+from .DatasetGenerator import DatasetGenerator
+
 
 def main():
     """
     The main function used to call the methods from the datasetgenerator.
     """
-    dsgen = DatasetGenerator(FLAGS.uniprotfile_path, FLAGS.uniprot_csv, FLAGS.save_dir)
+    dsgen = DatasetGenerator(
+        FLAGS.uniprotfile_path,
+        FLAGS.uniprot_csv,
+        FLAGS.save_dir)
     dsgen.uniprot_to_csv()
     dsgen.separate_classes_by_GO()
     dsgen.filter_count_and_write_all()
     dsgen.generate_dataset_by_GO_list(GO_file=FLAGS.EC_file)
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -41,8 +46,6 @@ if __name__ == '__main__':
 
     FLAGS, unparsed = parser.parse_known_args()
     if unparsed:
-        print('Error, unrecognized flags:', unparsed)
+        print(('Error, unrecognized flags:', unparsed))
         exit(-1)
     main()
-
-

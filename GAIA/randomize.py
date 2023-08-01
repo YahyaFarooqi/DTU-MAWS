@@ -5,9 +5,9 @@ import json
 import os
 import argparse
 
-from DeeProtein import DeeProtein
-import helpers as helpers
-from gaia import GeneticAlg
+from .DeeProtein import DeeProtein
+from . import helpers as helpers
+from .gaia import GeneticAlg
 
 
 def main():
@@ -33,15 +33,19 @@ def main():
     classifier = DeeProtein(optionhandler)
     classifier.init_for_machine_infer(optionhandler._batchsize)
 
-    evolver = GeneticAlg(optionhandler, classifier, helpers.TFrecords_generator(optionhandler))
+    evolver = GeneticAlg(
+        optionhandler,
+        classifier,
+        helpers.TFrecords_generator(optionhandler))
     evolver.randomize_all(FLAGS.amount2randomize)
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '--config_json',
         type=str,
-  #      aliases=['c'],
+        #      aliases=['c'],
         required=True,
         help='Path to the config.JSON')
     parser.add_argument(
@@ -53,7 +57,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--sequence',
         type=str,
-  #      aliases=['s'],
+        #      aliases=['s'],
         default=False,
         help='''Path to the sequence file.
         Structure of sequence file.
@@ -68,12 +72,12 @@ if __name__ == '__main__':
         7 'Garbage_weight: [Float]' cotains weight for garbage score''')
     parser.add_argument(
         '--output_dir',
-   #     aliases=['o'],
+        #     aliases=['o'],
         type=str,
         default=False,
         help='Path to the directory for the output. Overwrites the summaries_dir given in the config JSON.')
     FLAGS, unparsed = parser.parse_known_args()
     if unparsed:
-        print('Error, unrecognized flags:', unparsed)
+        print(('Error, unrecognized flags:', unparsed))
         exit(-1)
     main()

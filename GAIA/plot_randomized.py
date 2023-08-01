@@ -2,12 +2,12 @@ import sys
 import os
 import pickle
 
-import gaia as gaia
+from . import gaia as gaia
 
 
 def main():
     """sys.argv[1] is the summariesdir, where gaia wrote the data."""
-    os.environ['MPLCONFIGDIR'] = "." # set this to something reasonable not mounted
+    os.environ['MPLCONFIGDIR'] = "."  # set this to something reasonable not mounted
     highlight_names = ['GO:0004818', 'GO:0004827']
     # save all used scripts to the summaries dir
 
@@ -27,6 +27,7 @@ def main():
         highl=[175, 154],
         goal=174, f_width=6, f_height=4, res=300, name='data_HD.png')
     return
+
 
 if __name__ == '__main__':
     main()

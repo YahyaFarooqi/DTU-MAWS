@@ -25,11 +25,19 @@ def main():
     logfile = open(os.path.join(sys.argv[2], 'logfile.txt'), 'w')
     pprint.pprint(config_dict, logfile)
 
-    reduced, data = calc_predcel.calc(config_json, sys.argv[2], int(sys.argv[3]), logfile)
+    reduced, data = calc_predcel.calc(
+        config_json, sys.argv[2], int(
+            sys.argv[3]), logfile)
     pickle.dump(reduced, open(os.path.join(sys.argv[2], 'reduced.p'), 'wb'))
-    plot_predcel.plot_meta(reduced, maxepochs=config_dict['epochs'], prefix='', summariesdir=sys.argv[2], vl=config_dict['vl'])
+    plot_predcel.plot_meta(
+        reduced,
+        maxepochs=config_dict['epochs'],
+        prefix='',
+        summariesdir=sys.argv[2],
+        vl=config_dict['vl'])
 
     print('Done.')
+
 
 if __name__ == '__main__':
     main()

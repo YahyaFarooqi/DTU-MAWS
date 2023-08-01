@@ -20,9 +20,15 @@ def main():
     reduced = pickle.load(open(os.path.join(sys.argv[2], 'reduced.p'), 'rb'))
     summariesdir = sys.argv[2]
 
-    predcel.plot_meta(reduced, summariesdir=summariesdir, maxepochs=config_dict['epochs'], suffix='5', vl=config_dict['vl'])
+    predcel.plot_meta(
+        reduced,
+        summariesdir=summariesdir,
+        maxepochs=config_dict['epochs'],
+        suffix='5',
+        vl=config_dict['vl'])
     open(os.path.join(sys.argv[2], 'config.json'), 'w').write(
         open(sys.argv[1], 'r').read())
+
 
 if __name__ == '__main__':
     main()

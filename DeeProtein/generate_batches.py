@@ -3,7 +3,7 @@ Generate tf.Records files for the Training of DeeProtein.
 """
 import json
 import argparse
-from helpers import OptionHandler, TFrecords_generator
+from .helpers import OptionHandler, TFrecords_generator
 
 
 def main():
@@ -27,6 +27,6 @@ if __name__ == '__main__':
         help='Path to the config.JSON')
     FLAGS, unparsed = parser.parse_known_args()
     if unparsed:
-        print('Error, unrecognized flags:', unparsed)
+        print(('Error, unrecognized flags:', unparsed))
         exit(-1)
     main()

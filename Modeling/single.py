@@ -21,7 +21,6 @@ def main():
     if not os.path.exists(sys.argv[2]):
         os.mkdir(sys.argv[2])
 
-
     logfile = open(os.path.join(sys.argv[2], 'logfile.txt'), 'w')
     pprint.pprint(config_dict, logfile)
     o, v = calc.initialisation(config_dict)
@@ -35,6 +34,7 @@ def main():
     with open(os.path.join(sys.argv[2], 'data.p'), 'wb') as pfile:
         pickle.dump([o, v, config_dict], pfile)
     plot.plot(o, v, summariesdir=sys.argv[2])
+
 
 if __name__ == '__main__':
     main()

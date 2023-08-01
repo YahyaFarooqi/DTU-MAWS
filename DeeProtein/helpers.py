@@ -1,18 +1,19 @@
+import os
+import re
+from matplotlib import font_manager
+from collections import OrderedDict
+from sklearn.preprocessing import OneHotEncoder
+from seaborn import barplot, set_style
+import sklearn.metrics
+import matplotlib.pyplot as plt
+import tarfile
+import json
+import math
+import random
+import numpy as np
+import tensorflow as tf
 import matplotlib
 matplotlib.use('Agg')
-import tensorflow as tf
-import numpy as np
-import re, os
-import random
-import math
-import json
-import tarfile
-import matplotlib.pyplot as plt
-import sklearn.metrics
-from seaborn import barplot, set_style
-from sklearn.preprocessing import OneHotEncoder
-from collections import OrderedDict
-from matplotlib import font_manager
 
 
 class OptionHandler():
@@ -52,6 +53,7 @@ class OptionHandler():
       _ec_file: `str` the path to the EC_file, holding all labels and the label sizes.
       _summariesdir: `str` the directory where to store the model and to write the summaries.
     """
+
     def __init__(self, config_dict):
         self.config = config_dict
         self._name = config_dict['model_name']
@@ -77,20 +79,21 @@ class OptionHandler():
         self._batchgenmode = config_dict['batchgen_mode']
         self._windowlength = config_dict['window_length']
         self._minlength = config_dict['min_length']
-        self._numthreads = config_dict['num_threads'] #TODO ASSERT THIS NUMBER!!!!!!!!
+        # TODO ASSERT THIS NUMBER!!!!!!!!
+        self._numthreads = config_dict['num_threads']
         self._restorepath = config_dict['restore_path']
         self._restore = True if config_dict['restore'] == 'True' else False
         self._debug = True if config_dict['debug'] == 'True' else False
         self._ecfile = config_dict['EC_file']
-        self._summariesdir = config_dict['summaries_dir'] # for tensorboard
+        self._summariesdir = config_dict['summaries_dir']  # for tensorboard
         self._summariesdir = self._summariesdir + \
-                           '_{l}_{n}_{w}_{g}_{b}_{lr}_{e}'.format(g=self._batchgenmode,
-                                                                  w=self._windowlength,
-                                                                  n=self._nclasses,
-                                                                  b=self._batchsize,
-                                                                  lr=self._learningrate,
-                                                                  e=self._epsilon,
-                                                                  l=self._labels)
+            '_{l}_{n}_{w}_{g}_{b}_{lr}_{e}'.format(g=self._batchgenmode,
+                                                   w=self._windowlength,
+                                                   n=self._nclasses,
+                                                   b=self._batchsize,
+                                                   lr=self._learningrate,
+                                                   e=self._epsilon,
+                                                   l=self._labels)
         if not os.path.exists(self._summariesdir):
             os.makedirs(self._summariesdir)
         if not os.path.exists(self._batchesdir):
@@ -118,12 +121,17 @@ class RocTracker():
     true_positives_sum: `Array` holding the true positives predictions for each class.
     num_calculations: `int32` as a counter.
     """
+
     def __init__(self, optionhandler):
         self._opts = optionhandler
         self.metrics_path = os.path.join(self._opts._summariesdir, 'metrics')
         if not os.path.exists(self.metrics_path):
             os.mkdir(self.metrics_path)
-        self.metrics_file = open(os.path.join(self.metrics_path, 'metrics.csv'), "w")
+        self.metrics_file = open(
+            os.path.join(
+                self.metrics_path,
+                'metrics.csv'),
+            "w")
         self.roc_score = []
         self.roc_labels = []
         self.pred_positives_sum = np.zeros(self._opts._nclasses)
@@ -132,13 +140,16 @@ class RocTracker():
         self.num_calculations = 0
 
         try:
-            plt.style.use(json.load(
-                open('/net/data.isilon/igem/2017/scripts/clonedDeeProtein/DeeProtein/style.json', 'r')))
+            plt.style.use(
+                json.load(
+                    open(
+                        '/net/data.isilon/igem/2017/scripts/clonedDeeProtein/DeeProtein/style.json',
+                        'r')))
             self.font = font_manager.FontProperties(
                 fname='/net/data.isilon/igem/2017/data/cache/fonts/JosefinSans-Regular.tff')
             self.monospaced = font_manager.FontProperties(
                 fname='/net/data.isilon/igem/2017/data/cache/fonts/DroidSansMono-Regular.ttf')
-        except:
+        except BaseException:
             pass
 
     def update(self, sigmoid_logits, true_labels):
@@ -149,20 +160,27 @@ class RocTracker():
           true_labels: `np.Array` and 2D arrray holding the true labels for the validation batch.
         """
         # threshold this thing
-        # we consider a class "predicted" if it's sigmoid activation is higher than 0.5 (predicted labels)
+        # we consider a class "predicted" if it's sigmoid activation is higher
+        # than 0.5 (predicted labels)
         batch_predicted_labels = np.greater(sigmoid_logits, 0.5)
         batch_predicted_labels = batch_predicted_labels.astype(float)
 
-
-        batch_pred_pos = np.sum(batch_predicted_labels, axis=0) #sum up along the batch dim, keep the channels
-        batch_actual_pos = np.sum(true_labels, axis=0) #sum up along the batch dim, keep the channels
+        # sum up along the batch dim, keep the channels
+        batch_pred_pos = np.sum(batch_predicted_labels, axis=0)
+        # sum up along the batch dim, keep the channels
+        batch_actual_pos = np.sum(true_labels, axis=0)
         # calculate the true positives:
-        batch_true_pos = np.sum(np.multiply(batch_predicted_labels, true_labels), axis=0)
+        batch_true_pos = np.sum(
+            np.multiply(
+                batch_predicted_labels,
+                true_labels),
+            axis=0)
 
         # and update the counts
-        self.pred_positives_sum += batch_pred_pos #what the model said
-        self.actual_positives_sum += batch_actual_pos #what the labels say
-        self.true_positive_sum += batch_true_pos # where labels and model predictions>0.5 match
+        self.pred_positives_sum += batch_pred_pos  # what the model said
+        self.actual_positives_sum += batch_actual_pos  # what the labels say
+        # where labels and model predictions>0.5 match
+        self.true_positive_sum += batch_true_pos
 
         assert len(self.true_positive_sum) == self._opts._nclasses
 
@@ -177,7 +195,11 @@ class RocTracker():
         Args:
           logfile: `file-object` the logfile of the DeeProtein model.
         """
-        self.metrics_file = open(os.path.join(self.metrics_path, 'metrics.csv'), "w")
+        self.metrics_file = open(
+            os.path.join(
+                self.metrics_path,
+                'metrics.csv'),
+            "w")
 
         self.num_calculations += 1
 
@@ -190,8 +212,8 @@ class RocTracker():
         test_set_size = self.roc_labels.shape[0]
 
         # do the calculations
-        fpr, tpr, thresholds = sklearn.metrics.roc_curve(y_true=np.reshape(self.roc_labels, (-1)),
-                                                         y_score=np.reshape(self.roc_score, (-1)))
+        fpr, tpr, thresholds = sklearn.metrics.roc_curve(y_true=np.reshape(
+            self.roc_labels, (-1)), y_score=np.reshape(self.roc_score, (-1)))
         auc = sklearn.metrics.auc(fpr, tpr)
 
         precision_arr, recall_arr, thresholds = sklearn.metrics.precision_recall_curve(
@@ -216,33 +238,54 @@ class RocTracker():
 
         # get printable metrics (for log file):
         # where predPositives_sum == 0, tp_sum is also 0
-        precision_class = self.true_positive_sum / np.maximum(1, self.pred_positives_sum)
+        precision_class = self.true_positive_sum / \
+            np.maximum(1, self.pred_positives_sum)
         # where actualPositives_sum == 0, tp_sum is also 0
-        recall_class = self.true_positive_sum / np.maximum(1, self.actual_positives_sum)
-        precision = np.sum(self.true_positive_sum) / np.sum(self.pred_positives_sum)
-        recall = np.sum(self.true_positive_sum) / np.sum(self.actual_positives_sum)
-        f1 = 2*precision*recall / (precision + recall)
+        recall_class = self.true_positive_sum / \
+            np.maximum(1, self.actual_positives_sum)
+        precision = np.sum(self.true_positive_sum) / \
+            np.sum(self.pred_positives_sum)
+        recall = np.sum(self.true_positive_sum) / \
+            np.sum(self.actual_positives_sum)
+        f1 = 2 * precision * recall / (precision + recall)
         logfile.write("[*] Tested on %d seqs, "
                       "precision %.2f%%, "
                       "recall %.2f%%, "
                       "F1 %.2f%%\n" % (test_set_size, precision, recall, f1))
         logfile.flush()
 
-        #plot ROC:
-        self.plot_simple_curve(x=fpr, y=tpr, title=self._opts._name + '_ROC_curve',
-                          legend=self._opts._name + ' (AUC = %0.4f)' % auc,
-                          xname='False positive rate', yname='True positive rate',
-                          filename=os.path.join(self.metrics_path, self._opts._name +
-                                                '.roc_%d' % self.num_calculations))
-
+        # plot ROC:
+        self.plot_simple_curve(
+            x=fpr,
+            y=tpr,
+            title=self._opts._name +
+            '_ROC_curve',
+            legend=self._opts._name +
+            ' (AUC = %0.4f)' %
+            auc,
+            xname='False positive rate',
+            yname='True positive rate',
+            filename=os.path.join(
+                self.metrics_path,
+                self._opts._name +
+                '.roc_%d' %
+                self.num_calculations))
 
         # PR curve
-        self.plot_simple_curve(x=recall_arr, y=precision_arr,
-                          title=self._opts._name + ' PR curve', legend=self._opts._name,
-                          xname='Recall', yname='Precision',
-                          filename=os.path.join(self.metrics_path, self._opts._name +
-                                                '.precision_%d' % self.num_calculations),
-                               include_linear=False)
+        self.plot_simple_curve(
+            x=recall_arr,
+            y=precision_arr,
+            title=self._opts._name +
+            ' PR curve',
+            legend=self._opts._name,
+            xname='Recall',
+            yname='Precision',
+            filename=os.path.join(
+                self.metrics_path,
+                self._opts._name +
+                '.precision_%d' %
+                self.num_calculations),
+            include_linear=False)
 
         # reset the stats-collectors:
         self.roc_score = []
@@ -252,7 +295,17 @@ class RocTracker():
 
         logfile.write('[*] Done testing.\n')
 
-    def plot_simple_curve(self, x, y, title, legend, xname, yname, filename, include_linear=True, iGEM_style=True):
+    def plot_simple_curve(
+            self,
+            x,
+            y,
+            title,
+            legend,
+            xname,
+            yname,
+            filename,
+            include_linear=True,
+            iGEM_style=True):
         """Plots simple curve in the iGEM style if wanted.
 
         Args:
@@ -284,8 +337,8 @@ class RocTracker():
             plt.ylabel(yname)
             plt.legend(loc="lower right")
 
-        plt.savefig(filename+".svg")
-        plt.savefig(filename+".png")
+        plt.savefig(filename + ".svg")
+        plt.savefig(filename + ".png")
         plt.close(fig)
 
 
@@ -339,9 +392,11 @@ class BatchGenerator():
         label_enc: A `sklearn.preprocessing.OneHotEncoder` used to encode the labels.
         AA_enc: A `sklearn.preprocessing.OneHotEncoder` used to encode the AA letters.
     """
+
     def __init__(self, optionhandler):
         self._opts = optionhandler
-        self.mode = self._opts._batchgenmode # one of ['window', 'bigbox', 'dynamic']
+        # one of ['window', 'bigbox', 'dynamic']
+        self.mode = self._opts._batchgenmode
         self.traindata = open(self._opts._traindata, 'r')
         self.validdata = open(self._opts._validdata, 'r')
         self.AA_to_id = {}
@@ -350,28 +405,30 @@ class BatchGenerator():
         self.id_to_class = OrderedDict()
         self._get_class_dict()
         self.embedding_dict = OrderedDict()
-        # determine the number of batches for eval from lines in the validdata and the garbagepercentage
+        # determine the number of batches for eval from lines in the validdata
+        # and the garbagepercentage
         self.garbage_percentage = 0.2
-        self.garbage_count = 0 # a counter for generated garbage sequences
-        self.eval_batch_nr = int(_count_lines(self._opts._validdata) * (1 + self.garbage_percentage) //
-                              self._opts._batchsize)
-        print('Initialized Batchgen with   batchsize: %d,   numeval_batches: %d at'
-              '                            garbage_percentage: %f' % (self._opts._batchsize,
-                                                                      self.eval_batch_nr,
-                                                                      self.garbage_percentage))
+        self.garbage_count = 0  # a counter for generated garbage sequences
+        self.eval_batch_nr = int(_count_lines(
+            self._opts._validdata) * (1 + self.garbage_percentage) // self._opts._batchsize)
+        print(('Initialized Batchgen with   batchsize: %d,   numeval_batches: %d at'
+               '                            garbage_percentage: %f' %
+               (self._opts._batchsize, self.eval_batch_nr, self.garbage_percentage)))
         self.batches_per_file = 10000
         self.epochs = 2000
         self.curr_epoch = 0
-        self.label_enc = OneHotEncoder(n_values=self._opts._nclasses, sparse=False)
+        self.label_enc = OneHotEncoder(
+            n_values=self._opts._nclasses, sparse=False)
         self.AA_enc = 'where we put the encoder for the AAs'
 
         if self.mode.startswith('one_hot'):
             AAs = ['A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L',
                    'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'V', 'W', 'Y',]
 
-            self.AA_enc = OneHotEncoder(n_values=self._opts._depth, sparse=False)
+            self.AA_enc = OneHotEncoder(
+                n_values=self._opts._depth, sparse=False)
 
-            if 'physchem' in self.mode: #this is to be implemented.
+            if 'physchem' in self.mode:  # this is to be implemented.
                 _hydro = [1.8, 2.5, -3.5, -3.5, 2.8,
                           -0.4, -3.2, 4.5, -3.9, 3.8,
                           1.9, -3.5, -1.6, -3.5, -4.5,
@@ -380,25 +437,28 @@ class BatchGenerator():
                                 75.067, 155.156, 131.175, 146.189, 131.175,
                                 149.208, 132.119, 115.132, 146.146, 174.203,
                                 105.093, 119.119, 117.148, 204.228, 181.191]
-                _is_polar = lambda aa: 1 if aa in ['DEHKNQRSTY'] else 0
-                _is_aromatic = lambda aa: 1 if aa in ['FWY'] else 0
-                _has_hydroxyl = lambda aa: 1 if aa in ['ST'] else 0 #should we add TYR??
-                _has_sulfur = lambda aa: 1 if aa in ['CM'] else 0
+
+                def _is_polar(aa): return 1 if aa in ['DEHKNQRSTY'] else 0
+                def _is_aromatic(aa): return 1 if aa in ['FWY'] else 0
+                def _has_hydroxyl(aa): return 1 if aa in [
+                    'ST'] else 0  # should we add TYR??
+
+                def _has_sulfur(aa): return 1 if aa in ['CM'] else 0
 
                 for i, aa in enumerate(AAs):
-                    self.AA_to_id[aa]  = {'id': len(self.AA_to_id),
-                                          'hydro': _hydro[i],
-                                          'molweight': _molarweight[i],
-                                          'pol': _is_polar(aa),
-                                          'arom': _is_aromatic(aa),
-                                          'sulf': _has_sulfur(aa),
-                                          'OH': _has_hydroxyl(aa)}
+                    self.AA_to_id[aa] = {'id': len(self.AA_to_id),
+                                         'hydro': _hydro[i],
+                                         'molweight': _molarweight[i],
+                                         'pol': _is_polar(aa),
+                                         'arom': _is_aromatic(aa),
+                                         'sulf': _has_sulfur(aa),
+                                         'OH': _has_hydroxyl(aa)}
             else:
                 for aa in AAs:
                     self.AA_to_id[aa] = len(self.AA_to_id)
                 # get the inverse:
                 self.id_to_AA = {}
-                for aa, id in self.AA_to_id.items():
+                for aa, id in list(self.AA_to_id.items()):
                     self.id_to_AA[id] = aa
                 self.id_to_AA[42] = '_'
 
@@ -409,7 +469,7 @@ class BatchGenerator():
         with open(self._opts._ecfile, "r") as ec_fobj:
             for line in ec_fobj:
                 fields = line.strip().split()
-                if fields[1].endswith('.csv'): 
+                if fields[1].endswith('.csv'):
                     fields[1] = fields[1].rstrip('.csv')
 
                 if self._opts._labels == 'EC':
@@ -417,12 +477,11 @@ class BatchGenerator():
                                                   'size': int(fields[0]),
                                                   }
                 if self._opts._labels == 'GO':
-                    self.class_dict[fields[1].split('_')[1]] = {'id': len(self.class_dict),
-                                                                'size': int(fields[0]),
-                                                                }
+                    self.class_dict[fields[1].split('_')[1]] = {'id': len(
+                        self.class_dict), 'size': int(fields[0]), }
 
         # get a reverse dict:
-        for key in self.class_dict.keys():
+        for key in list(self.class_dict.keys()):
             self.id_to_class[self.class_dict[key]['id']] = key
 
     def _update_embedding_dict(self, name, labels):
@@ -437,7 +496,7 @@ class BatchGenerator():
             # add UNK token the first time this method is called
             self.embedding_dict['UNK'] = {}
             self.embedding_dict['UNK']['labels'] = ['UNK']
-            self.embedding_dict['UNK']['id'] = 0 # we save 0 for the UNK token
+            self.embedding_dict['UNK']['id'] = 0  # we save 0 for the UNK token
 
         # check if the key (= name) is already in the dict:
         if name not in self.embedding_dict:
@@ -447,7 +506,9 @@ class BatchGenerator():
             self.embedding_dict[name]['id'] = len(self.embedding_dict)
         else:
             # get a new entry to the dict:
-            name_matches = [k for k in self.embedding_dict.keys() if k.startswith(name)]
+            name_matches = [
+                k for k in list(
+                    self.embedding_dict.keys()) if k.startswith(name)]
             new_name = name + str(len(name_matches))
             assert len(self.embedding_dict) > 0
             self.embedding_dict[new_name] = {}
@@ -473,20 +534,22 @@ class BatchGenerator():
         fields = line.strip().split(';')
         name = fields[0]
         seq = fields[1]
-        if fields[2].endswith('.csv'): #TODO assert this
+        if fields[2].endswith('.csv'):  # TODO assert this
             fields[2] = fields[2].rstrip('.csv')
         if self._opts._labels == 'EC':
-            EC_str = fields[2] #TODO assert this
+            EC_str = fields[2]  # TODO assert this
             if encoded_labels:
                 EC_CLASS = 0 if self._opts._inferencemode else self.class_dict[EC_str]['id']
-                label = [[EC_CLASS]] # we need a 2D array
+                label = [[EC_CLASS]]  # we need a 2D array
             else:
                 label = EC_str
         elif self._opts._labels == 'GO':
-            GO_str = fields[2] #TODO assert this
-            GOs = 0 if self._opts._inferencemode else fields[2].split(',') #TODO assert this
+            GO_str = fields[2]  # TODO assert this
+            GOs = 0 if self._opts._inferencemode else fields[2].split(
+                ',')  # TODO assert this
             if encoded_labels:
-                label = [[self.class_dict[go]['id']] for go in GOs] # returns a 2D array
+                label = [[self.class_dict[go]['id']]
+                         for go in GOs]  # returns a 2D array
             else:
                 label = GOs
         return name, seq, label
@@ -509,21 +572,28 @@ class BatchGenerator():
                 seq_matrix = np.ndarray(shape=(len(seq)), dtype=np.int32)
             # if sequence does not fit we clip it:
             else:
-                seq_matrix = np.ndarray(shape=(self._opts._windowlength), dtype=np.int32)
+                seq_matrix = np.ndarray(
+                    shape=(
+                        self._opts._windowlength),
+                    dtype=np.int32)
             for i in range(len(seq_matrix)):
                 seq_matrix[i] = self.AA_to_id[seq[i]]
-            start_pos = 0 #because our sequence sits at the beginning of the box
-            length = len(seq_matrix)  #true length (1 based)
+            start_pos = 0  # because our sequence sits at the beginning of the box
+            length = len(seq_matrix)  # true length (1 based)
             # now encode the sequence in one-hot
-            oh_seq_matrix = np.reshape(self.AA_enc.fit_transform(np.reshape(seq_matrix, (1, -1))),
-                                       (len(seq_matrix), 20))
+            oh_seq_matrix = np.reshape(self.AA_enc.fit_transform(
+                np.reshape(seq_matrix, (1, -1))), (len(seq_matrix), 20))
             # pad the sequence to the boxsize:
-            npad = ((0, self._opts._windowlength-length), (0, 0))
-            padded_seq_matrix = np.pad(oh_seq_matrix, pad_width=npad, mode='constant', constant_values=0)
+            npad = ((0, self._opts._windowlength - length), (0, 0))
+            padded_seq_matrix = np.pad(
+                oh_seq_matrix,
+                pad_width=npad,
+                mode='constant',
+                constant_values=0)
             padded_seq_matrix = np.transpose(padded_seq_matrix)
             del oh_seq_matrix, seq_matrix
 
-            return padded_seq_matrix, start_pos, length #true length 1 based
+            return padded_seq_matrix, start_pos, length  # true length 1 based
         else:
             print("Error: MODE must be of 'one_hot_padded'")
 
@@ -547,7 +617,8 @@ class BatchGenerator():
             desired_label_ID = self.class_dict[desired_label]['id']
 
             # encode label one_hot:
-            oh_label = self.label_enc.fit_transform([[desired_label_ID]]) # of shape [1, n_classes]
+            oh_label = self.label_enc.fit_transform(
+                [[desired_label_ID]])  # of shape [1, n_classes]
             return oh_label, seq_matrix, start_pos, length
 
         else:
@@ -578,7 +649,8 @@ class BatchGenerator():
           start_pos: A `Tensor` holding the start pos of the sequence in the window (defaults to 0).
           end_pos:  A `Tensor` holding the end pos of the sequence in the window.
         """
-        name, seq, label = self._csv_EC_decoder(queue, encoded_labels=encode_labels)
+        name, seq, label = self._csv_EC_decoder(
+            queue, encoded_labels=encode_labels)
         seq_matrix, start_pos, end_pos = self._seq2tensor(seq)
         if return_name:
             return name, label, seq_matrix, start_pos, end_pos
@@ -605,10 +677,13 @@ class BatchGenerator():
         self.garbage_count += 1
 
         # get the length of the protein
-        length = random.randint(175, self._opts._windowlength-10) #enforce padding
+        length = random.randint(
+            175,
+            self._opts._windowlength -
+            10)  # enforce padding
 
         if mode == 'pattern':
-            #print('pattern')
+            # print('pattern')
             # Generate a repetitive pattern of 5 AminoAcids to generate the prot
             # get a random nr of AAs to generate the pattern:
             AA_nr = random.randint(2, 5)
@@ -618,10 +693,10 @@ class BatchGenerator():
                 idx_found = False
                 while not idx_found:
                     aa_idx = random.randint(0, 19)
-                    if not aa_idx in idxs:
+                    if aa_idx not in idxs:
                         idxs.append(aa_idx)
                         idx_found = True
-            reps = math.ceil(length/AA_nr)
+            reps = math.ceil(length / AA_nr)
             seq = reps * idxs
             length = len(seq)
 
@@ -642,10 +717,17 @@ class BatchGenerator():
         label = np.expand_dims(label, axis=0)
         garbage_label = np.asarray([1])
         garbage_label = np.expand_dims(garbage_label, axis=0)
-        oh_seq_matrix = np.reshape(self.AA_enc.fit_transform(np.reshape(seq, (1, -1))), (len(seq), 20))
+        oh_seq_matrix = np.reshape(
+            self.AA_enc.fit_transform(
+                np.reshape(
+                    seq, (1, -1))), (len(seq), 20))
         # pad the sequence to the boxsize:
-        npad = ((0, self._opts._windowlength-length), (0, 0))
-        padded_seq_matrix = np.pad(oh_seq_matrix, pad_width=npad, mode='constant', constant_values=0)
+        npad = ((0, self._opts._windowlength - length), (0, 0))
+        padded_seq_matrix = np.pad(
+            oh_seq_matrix,
+            pad_width=npad,
+            mode='constant',
+            constant_values=0)
         padded_seq = np.transpose(padded_seq_matrix)
         if return_name:
             # return a sequence ID to identify the generated sequence
@@ -664,14 +746,20 @@ class BatchGenerator():
           seq_tensor_batch: A `Tensor`, [batchsize, 20, windowlength, 1] holding the random data batch.
           onehot_labelled_batch: A `Tensor`, [batchsize, n_classes] holding the random labels.
         """
-        seq_tensor_batch = tf.random_normal([self._opts._batchsize, self._opts._embeddingdim,
-                                             self._opts._windowlength, 1])
+        seq_tensor_batch = tf.random_normal(
+            [self._opts._batchsize, self._opts._embeddingdim, self._opts._windowlength, 1])
 
-        label_batch = [np.random.randint(1,self._opts._nclasses) for _ in range(self._opts._batchsize)]
+        label_batch = [
+            np.random.randint(
+                1, self._opts._nclasses) for _ in range(
+                self._opts._batchsize)]
         index_batch = [tf.constant(label) for label in label_batch]
         label_tensor = tf.stack(index_batch)
-        onehot_labelled_batch = tf.one_hot(indices=tf.cast(label_tensor, tf.int32),
-                                           depth=self._opts._nclasses)
+        onehot_labelled_batch = tf.one_hot(
+            indices=tf.cast(
+                label_tensor,
+                tf.int32),
+            depth=self._opts._nclasses)
         return seq_tensor_batch, onehot_labelled_batch
 
     def generate_batch(self, is_train):
@@ -699,11 +787,11 @@ class BatchGenerator():
         for i in range(self._opts._batchsize):
             try:
                 """ Note that this is not shuffled! """
-                ECclass, seq_tensor, start_pos, end_pos = self._process_csv(in_csv, return_name=False,
-                                                                            encode_labels=True)
+                ECclass, seq_tensor, start_pos, end_pos = self._process_csv(
+                    in_csv, return_name=False, encode_labels=True)
                 label_batch.append(ECclass)
                 seq_tensors.append(seq_tensor)
-            except IndexError: # catches error from csv_decoder
+            except IndexError:  # catches error from csv_decoder
                 # reopen the file:
                 in_csv.close()
                 # TODO: implement file shuffling when we reopen the file
@@ -714,8 +802,8 @@ class BatchGenerator():
                     self.validdata = open(self._opts._validdata, 'r')
                     in_csv = self.validdata
                 """ redo """
-                ECclass, seq_tensor, start_pos, end_pos = self._process_csv(in_csv, return_name=False,
-                                                                            encode_labels=True)
+                ECclass, seq_tensor, start_pos, end_pos = self._process_csv(
+                    in_csv, return_name=False, encode_labels=True)
                 label_batch.append(ECclass)
                 seq_tensors.append(seq_tensor)
 
@@ -744,31 +832,32 @@ class BatchGenerator():
         for i in range(self._opts._batchsize):
             try:
                 """ Note that this is not shuffled! """
-                name, label, seq_tensor, _, _ = self._process_csv(in_csv, return_name=True,
-                                                                  encode_labels=False)
+                name, label, seq_tensor, _, _ = self._process_csv(
+                    in_csv, return_name=True, encode_labels=False)
                 seq_tensors.append(seq_tensor)
                 labels.append(label)
-            except IndexError: # catches error from csv_decoder
+            except IndexError:  # catches error from csv_decoder
                 # reopen the file:
                 in_csv.close()
                 # TODO: implement file shuffling when we reopen the file
                 self.traindata = open(self._opts._traindata, 'r')
                 in_csv = self.traindata
                 """ redo """
-                name, label, seq_tensor, _, _ = self._process_csv(in_csv, return_name=True,
-                                                                  encode_labels=False)
+                name, label, seq_tensor, _, _ = self._process_csv(
+                    in_csv, return_name=True, encode_labels=False)
                 seq_tensors.append(seq_tensor)
                 labels.append(label)
 
-        # encode the labels "one-hot" although not really one hot, but rather with the passed score
+        # encode the labels "one-hot" although not really one hot, but rather
+        # with the passed score
         labels_tensor = []
         for i in labels:
             labels_tensor = [np.float32(l) for l in labels]
         del labels
-        labels = np.stack(labels_tensor, axis=0) # [b, 1]
-        #print(labels.shape)
+        labels = np.stack(labels_tensor, axis=0)  # [b, 1]
+        # print(labels.shape)
         batch = np.stack(seq_tensors, axis=0)
-        batch = np.expand_dims(batch, axis=-1) # [b, aa, w, 1]
+        batch = np.expand_dims(batch, axis=-1)  # [b, aa, w, 1]
 
         return batch, labels
 
@@ -792,46 +881,49 @@ class BatchGenerator():
             for i in range(self._opts._batchsize):
                 try:
                     """ Note that this is not shuffled! """
-                    name, label, seq_tensor, _, _ = self._process_csv(in_csv, return_name=True,
-                                                                      encode_labels=False)
+                    name, label, seq_tensor, _, _ = self._process_csv(
+                        in_csv, return_name=True, encode_labels=False)
                     self._update_embedding_dict(name, label)
                     seq_tensors.append(seq_tensor)
-                except IndexError: # catches error from csv_decoder
+                except IndexError:  # catches error from csv_decoder
                     # reopen the file:
                     in_csv.close()
                     # TODO: implement file shuffling when we reopen the file
                     self.validdata = open(self._opts._validdata, 'r')
                     in_csv = self.validdata
                     """ redo """
-                    name, label, seq_tensor, _, _ = self._process_csv(in_csv, return_name=True,
-                                                                      encode_labels=False)
+                    name, label, seq_tensor, _, _ = self._process_csv(
+                        in_csv, return_name=True, encode_labels=False)
                     self._update_embedding_dict(name, label)
                     seq_tensors.append(seq_tensor)
 
         #
         elif include_garbage:
-            num_garbage = math.ceil(self._opts._batchsize * self.garbage_percentage)
+            num_garbage = math.ceil(
+                self._opts._batchsize *
+                self.garbage_percentage)
             for i in range(self._opts._batchsize - num_garbage):
                 try:
                     """ Note that this is not shuffled! """
-                    name, label, seq_tensor, _, _ = self._process_csv(in_csv, return_name=True,
-                                                                      encode_labels=False)
+                    name, label, seq_tensor, _, _ = self._process_csv(
+                        in_csv, return_name=True, encode_labels=False)
                     self._update_embedding_dict(name, label)
                     seq_tensors.append(seq_tensor)
-                except IndexError: # catches error from csv_decoder
+                except IndexError:  # catches error from csv_decoder
                     # reopen the file:
                     in_csv.close()
                     # TODO: implement file shuffling when we reopen the file
                     self.validdata = open(self._opts._validdata, 'r')
                     in_csv = self.validdata
                     """ redo """
-                    name, label, seq_tensor, _, _ = self._process_csv(in_csv, return_name=True,
-                                                                      encode_labels=False)
+                    name, label, seq_tensor, _, _ = self._process_csv(
+                        in_csv, return_name=True, encode_labels=False)
                     self._update_embedding_dict(name, label)
                     seq_tensors.append(seq_tensor)
 
             for i in range(num_garbage):
-                name, seq_tensor, _, _ = self.generate_garbage_sequence(return_name=True)
+                name, seq_tensor, _, _ = self.generate_garbage_sequence(
+                    return_name=True)
                 label = 'garbage'
                 self._update_embedding_dict(name, label)
                 seq_tensors.append(seq_tensor)
@@ -862,11 +954,14 @@ class TFrecords_generator():
         curr_epoch: A `int32` counter for the epcohs.
         writer: A `fileObj` in which to write the log messages.
     """
+
     def __init__(self, optionhandler):
         self._opts = optionhandler
-        self.label_enc = OneHotEncoder(n_values=self._opts._nclasses, sparse=False)
+        self.label_enc = OneHotEncoder(
+            n_values=self._opts._nclasses, sparse=False)
         self.AA_enc = 'where we put the encoder for the AAs'
-        self.mode = self._opts._batchgenmode # one of ['window', 'bigbox', 'dynamic']
+        # one of ['window', 'bigbox', 'dynamic']
+        self.mode = self._opts._batchgenmode
         self.traindata = open(self._opts._traindata, 'r')
         self.validdata = open(self._opts._validdata, 'r')
         self.AA_to_id = {}
@@ -880,16 +975,18 @@ class TFrecords_generator():
 
         # get the structure_dict
         structure_forms = ['UNORDERED', 'HELIX', 'STRAND', 'TURN']
-        assert len(structure_forms) == self._opts._structuredims-1
+        assert len(structure_forms) == self._opts._structuredims - 1
         for s in structure_forms:
-            self.structure_dict[s] = len(self.structure_dict) + 1 #serve the 0 for NO INFORMATION
+            # serve the 0 for NO INFORMATION
+            self.structure_dict[s] = len(self.structure_dict) + 1
 
         if self.mode.startswith('one_hot'):
             AAs = ['A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L',
                    'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'V', 'W', 'Y',]
 
-                   #'X']
-            self.AA_enc = OneHotEncoder(n_values=self._opts._depth, sparse=False)
+            # 'X']
+            self.AA_enc = OneHotEncoder(
+                n_values=self._opts._depth, sparse=False)
             if 'physchem' in self.mode:
                 _hydro = [1.8, 2.5, -3.5, -3.5, 2.8,
                           -0.4, -3.2, 4.5, -3.9, 3.8,
@@ -899,25 +996,28 @@ class TFrecords_generator():
                                 75.067, 155.156, 131.175, 146.189, 131.175,
                                 149.208, 132.119, 115.132, 146.146, 174.203,
                                 105.093, 119.119, 117.148, 204.228, 181.191]
-                _is_polar = lambda aa: 1 if aa in ['DEHKNQRSTY'] else 0
-                _is_aromatic = lambda aa: 1 if aa in ['FWY'] else 0
-                _has_hydroxyl = lambda aa: 1 if aa in ['ST'] else 0 #should we add TYR??
-                _has_sulfur = lambda aa: 1 if aa in ['CM'] else 0
+
+                def _is_polar(aa): return 1 if aa in ['DEHKNQRSTY'] else 0
+                def _is_aromatic(aa): return 1 if aa in ['FWY'] else 0
+                def _has_hydroxyl(aa): return 1 if aa in [
+                    'ST'] else 0  # should we add TYR??
+
+                def _has_sulfur(aa): return 1 if aa in ['CM'] else 0
 
                 for i, aa in enumerate(AAs):
-                    self.AA_to_id[aa]  = {'id': len(self.AA_to_id),
-                                          'hydro': _hydro[i],
-                                          'molweight': _molarweight[i],
-                                          'pol': _is_polar(aa),
-                                          'arom': _is_aromatic(aa),
-                                          'sulf': _has_sulfur(aa),
-                                          'OH': _has_hydroxyl(aa)}
+                    self.AA_to_id[aa] = {'id': len(self.AA_to_id),
+                                         'hydro': _hydro[i],
+                                         'molweight': _molarweight[i],
+                                         'pol': _is_polar(aa),
+                                         'arom': _is_aromatic(aa),
+                                         'sulf': _has_sulfur(aa),
+                                         'OH': _has_hydroxyl(aa)}
             else:
                 for aa in AAs:
                     self.AA_to_id[aa] = len(self.AA_to_id)
                 # get the inverse:
                 self.id_to_AA = {}
-                for aa, id in self.AA_to_id.items():
+                for aa, id in list(self.AA_to_id.items()):
                     self.id_to_AA[id] = aa
                 self.id_to_AA[42] = '_'
 
@@ -929,7 +1029,8 @@ class TFrecords_generator():
         with open(self._opts._ecfile, "r") as ec_fobj:
             for line in ec_fobj:
                 fields = line.strip().split()
-                if fields[1].endswith('.csv'):  #TODO delete this when error is fixed
+                if fields[1].endswith(
+                        '.csv'):  # TODO delete this when error is fixed
                     fields[1] = fields[1].rstrip('.csv')
 
                 if self._opts._labels == 'EC':
@@ -937,9 +1038,8 @@ class TFrecords_generator():
                                                   'size': int(fields[0]),
                                                   }
                 if self._opts._labels == 'GO':
-                    self.class_dict[fields[1].split('_')[1]] = {'id': len(self.class_dict),
-                                                  'size': int(fields[0]),
-                                                  }
+                    self.class_dict[fields[1].split('_')[1]] = {'id': len(
+                        self.class_dict), 'size': int(fields[0]), }
 
     def _csv_EC_decoder(self, in_csv):
         """Helper function for _process_csv().
@@ -964,13 +1064,14 @@ class TFrecords_generator():
                 fields[3] = fields[3].rstrip('.csv')
             EC_str = fields[3]
             EC_CLASS = 0 if self._opts._inferencemode else self.class_dict[EC_str]['id']
-            label = [[EC_CLASS]] # we need a 2D array
+            label = [[EC_CLASS]]  # we need a 2D array
         elif self._opts._labels == 'GO':
             GO_str = fields[2]
             GOs = 0 if self._opts._inferencemode else fields[2].split(',')
             if GOs[0].endswith('.csv'):
                 GOs = [go.rstrip('.csv') for go in GOs]
-            label = [[self.class_dict[go]['id']] for go in GOs] # returns a 2D array
+            label = [[self.class_dict[go]['id']]
+                     for go in GOs]  # returns a 2D array
         # TODO add an assertion for mode
         structure_str = fields[3]
         return name, seq, label, structure_str
@@ -993,21 +1094,28 @@ class TFrecords_generator():
                 seq_matrix = np.ndarray(shape=(len(seq)), dtype=np.int32)
             # if sequence does not fit we clip it:
             else:
-                seq_matrix = np.ndarray(shape=(self._opts._windowlength), dtype=np.int32)
+                seq_matrix = np.ndarray(
+                    shape=(
+                        self._opts._windowlength),
+                    dtype=np.int32)
             for i in range(len(seq_matrix)):
                 seq_matrix[i] = self.AA_to_id[seq[i]]
-            start_pos = 0 #because our sequence sits at the beginning of the box
-            length = len(seq_matrix)  #true length (1 based)
+            start_pos = 0  # because our sequence sits at the beginning of the box
+            length = len(seq_matrix)  # true length (1 based)
             # now encode the sequence in one-hot
-            oh_seq_matrix = np.reshape(self.AA_enc.fit_transform(np.reshape(seq_matrix,
-                                                                            (1, -1))), (len(seq_matrix), 20))
+            oh_seq_matrix = np.reshape(self.AA_enc.fit_transform(
+                np.reshape(seq_matrix, (1, -1))), (len(seq_matrix), 20))
             # pad the sequence to the boxsize:
-            npad = ((0, self._opts._windowlength-length), (0, 0))
-            padded_seq_matrix = np.pad(oh_seq_matrix, pad_width=npad, mode='constant', constant_values=0)
+            npad = ((0, self._opts._windowlength - length), (0, 0))
+            padded_seq_matrix = np.pad(
+                oh_seq_matrix,
+                pad_width=npad,
+                mode='constant',
+                constant_values=0)
             padded_seq_matrix = np.transpose(padded_seq_matrix)
             del oh_seq_matrix, seq_matrix
 
-            return padded_seq_matrix, start_pos, length #true length 1 based
+            return padded_seq_matrix, start_pos, length  # true length 1 based
 
         else:
             print("Error: MODE must be of 'one_hot_padded'")
@@ -1036,18 +1144,20 @@ class TFrecords_generator():
             structure = np.ones([seq_length])
             # modify the structure str:
             # TODO: Improve the super ugly hack with a proper regex
-            structure_str = re.sub('[\'\[\]\(]', '', structure_str)
-            structure_features = [j.strip(', ').split(', ') for j in structure_str.strip(')').split(')')]
+            structure_str = re.sub('[\'\\[\\]\\(]', '', structure_str)
+            structure_features = [j.strip(', ').split(
+                ', ') for j in structure_str.strip(')').split(')')]
 
             for ft in structure_features:
                 # get the ID for the ft:
                 id_to_write = self.structure_dict[ft[0]]
                 start = int(ft[1])
                 end = int(ft[2])
-                for i in range(start, end+1):
+                for i in range(start, end + 1):
                     structure[i] = id_to_write
-            npad = ((0, self._opts._windowlength-seq_length))
-            padded_structure_matrix = np.pad(structure, pad_width=npad, mode='constant', constant_values=0)
+            npad = ((0, self._opts._windowlength - seq_length))
+            padded_structure_matrix = np.pad(
+                structure, pad_width=npad, mode='constant', constant_values=0)
         else:
             # return only zeros if there is no information about the structure
             padded_structure_matrix = np.zeros([self._opts._windowlength])
@@ -1086,7 +1196,8 @@ class TFrecords_generator():
         except KeyError:
             structure_tensor = 'no_stucture_defined'
         # encode the label one_hot:
-        oh_label_tensor = self.label_enc.fit_transform(labels) # of shape [1, n_classes]
+        oh_label_tensor = self.label_enc.fit_transform(
+            labels)  # of shape [1, n_classes]
         classes = oh_label_tensor.shape[0]
         # open an array full of zeros to add the labels to
         oh_labels = np.zeros(self._opts._nclasses)
@@ -1116,10 +1227,10 @@ class TFrecords_generator():
         mode = modes[random.randint(0, 2)]
 
         # get the length of the protein
-        length = random.randint(175, self._opts._windowlength-1)
+        length = random.randint(175, self._opts._windowlength - 1)
 
         if mode == 'pattern':
-            #print('pattern')
+            # print('pattern')
             # Generate a repetitive pattern of 5 AminoAcids to generate the prot
             # get a random nr of AAs to generate the pattern:
             AA_nr = random.randint(2, 5)
@@ -1129,10 +1240,10 @@ class TFrecords_generator():
                 idx_found = False
                 while not idx_found:
                     aa_idx = random.randint(0, 19)
-                    if not aa_idx in idxs:
+                    if aa_idx not in idxs:
                         idxs.append(aa_idx)
                         idx_found = True
-            reps = math.ceil(length/AA_nr)
+            reps = math.ceil(length / AA_nr)
             seq = reps * idxs
             length = len(seq)
 
@@ -1153,10 +1264,17 @@ class TFrecords_generator():
         label = np.expand_dims(label, axis=0)
         garbage_label = np.asarray([1])
         garbage_label = np.expand_dims(garbage_label, axis=0)
-        oh_seq_matrix = np.reshape(self.AA_enc.fit_transform(np.reshape(seq, (1, -1))), (len(seq), 20))
+        oh_seq_matrix = np.reshape(
+            self.AA_enc.fit_transform(
+                np.reshape(
+                    seq, (1, -1))), (len(seq), 20))
         # pad the sequence to the boxsize:
-        npad = ((0, self._opts._windowlength-length), (0, 0))
-        padded_seq_matrix = np.pad(oh_seq_matrix, pad_width=npad, mode='constant', constant_values=0)
+        npad = ((0, self._opts._windowlength - length), (0, 0))
+        padded_seq_matrix = np.pad(
+            oh_seq_matrix,
+            pad_width=npad,
+            mode='constant',
+            constant_values=0)
         padded_seq = np.transpose(padded_seq_matrix)
         return padded_seq, label, garbage_label
 
@@ -1169,7 +1287,11 @@ class TFrecords_generator():
     def _int64_feature(self, value):
         return tf.train.Feature(int64_list=tf.train.Int64List(value=[value]))
 
-    def example_to_TFrecords(self, is_train, garbage_percentage=0.2, structure=True):
+    def example_to_TFrecords(
+            self,
+            is_train,
+            garbage_percentage=0.2,
+            structure=True):
         """Convert a dataset.csv into tf.Records format.
         This function reads the dataset files specified in the config dict and generates examples files in
         tf.Records format in the batches_dir folder specified in the config dict
@@ -1185,28 +1307,37 @@ class TFrecords_generator():
         if is_train:
             length_data_set = _count_lines(self._opts._traindata)
             batch_files_name = os.path.basename(self._opts._traindata) + \
-                               'train_batch_{}'.format(str(self._opts._windowlength))
+                'train_batch_{}'.format(str(self._opts._windowlength))
             print(batch_files_name)
             in_csv = self.traindata
 
         else:
             length_data_set = _count_lines(self._opts._validdata)
             batch_files_name = os.path.basename(self._opts._validdata) + \
-                               'valid_batch_{}'.format(str(self._opts._windowlength))
+                'valid_batch_{}'.format(str(self._opts._windowlength))
             print(batch_files_name)
             in_csv = self.validdata
 
-        files_to_write = np.int32(np.ceil(length_data_set*(1+garbage_percentage)
-                                          / float(self.examples_per_file))) # write every thing twice
+        files_to_write = np.int32(
+            np.ceil(
+                length_data_set *
+                (
+                    1 +
+                    garbage_percentage) /
+                float(
+                    self.examples_per_file)))  # write every thing twice
 
-        for n in range(1, files_to_write+1):
-            file_path = os.path.join(self._opts._batchesdir, batch_files_name) + '_' + str(n)
+        for n in range(1, files_to_write + 1):
+            file_path = os.path.join(
+                self._opts._batchesdir,
+                batch_files_name) + '_' + str(n)
             self.writer = tf.python_io.TFRecordWriter(file_path)
 
             if structure:
 
                 for i in range(self.examples_per_file):
-                    if include_garbage and  i % int(1/garbage_percentage) == 0:
+                    if include_garbage and i % int(
+                            1 / garbage_percentage) == 0:
                         # print("garbage_seq")
                         seq_tensor, label, garbage_label = self.generate_garbage_sequence()
                         structure_label = np.zeros([self._opts._windowlength])
@@ -1221,36 +1352,46 @@ class TFrecords_generator():
                         structure_label_raw = structure_label.tostring()
 
                         example = tf.train.Example(
-                            features=tf.train.Features(feature={
-                                'windowlength': self._int64_feature(self._opts._windowlength),
-                                'structure_depth': self._int64_feature(self._opts._structuredims),
-                                'depth': self._int64_feature(self._opts._depth),
-                                'label_classes': self._int64_feature(self._opts._nclasses),
-                                'seq_raw': self._bytes_feature(seq_raw),
-                                'label_raw': self._bytes_feature(label_raw),
-                                'garbage_label_raw': self._bytes_feature(garbage_label_raw),
-                                'structure_label_raw': self._bytes_feature(structure_label_raw),
-                            }))
+                            features=tf.train.Features(
+                                feature={
+                                    'windowlength': self._int64_feature(
+                                        self._opts._windowlength),
+                                    'structure_depth': self._int64_feature(
+                                        self._opts._structuredims),
+                                    'depth': self._int64_feature(
+                                        self._opts._depth),
+                                    'label_classes': self._int64_feature(
+                                        self._opts._nclasses),
+                                    'seq_raw': self._bytes_feature(seq_raw),
+                                    'label_raw': self._bytes_feature(label_raw),
+                                    'garbage_label_raw': self._bytes_feature(garbage_label_raw),
+                                    'structure_label_raw': self._bytes_feature(structure_label_raw),
+                                }))
                         self.writer.write(example.SerializeToString())
                     else:
                         # print("validseq")
                         try:
-                            oh_labels, seq_tensor, structure_label, _, _ = self._process_csv(in_csv)
+                            oh_labels, seq_tensor, structure_label, _, _ = self._process_csv(
+                                in_csv)
 
-                        except IndexError: # catches error from csv_decoder -> reopen the file:
+                        except IndexError:  # catches error from csv_decoder -> reopen the file:
                             in_csv.close()
                             if is_train:
-                                self.traindata = open(self._opts._traindata, 'r')
+                                self.traindata = open(
+                                    self._opts._traindata, 'r')
                                 in_csv = self.traindata
                             else:
-                                self.validdata = open(self._opts._validdata, 'r')
+                                self.validdata = open(
+                                    self._opts._validdata, 'r')
                                 in_csv = self.validdata
-                            oh_labels, seq_tensor, structure_label, _, _ = self._process_csv(in_csv)
+                            oh_labels, seq_tensor, structure_label, _, _ = self._process_csv(
+                                in_csv)
 
-                        garbage_label = np.asarray([0]) # NOT garbage
+                        garbage_label = np.asarray([0])  # NOT garbage
                         garbage_label = np.expand_dims(garbage_label, axis=0)
 
-                        assert seq_tensor.shape == (self._opts._depth, self._opts._windowlength)
+                        assert seq_tensor.shape == (
+                            self._opts._depth, self._opts._windowlength)
                         assert oh_labels.shape == (1, self._opts._nclasses)
                         # convert the features to a raw string:
                         seq_raw = seq_tensor.tostring()
@@ -1259,22 +1400,28 @@ class TFrecords_generator():
                         structure_label_raw = structure_label.tostring()
 
                         example = tf.train.Example(
-                            features=tf.train.Features(feature={
-                                'windowlength': self._int64_feature(self._opts._windowlength),
-                                'structure_depth': self._int64_feature(self._opts._structuredims),
-                                'depth': self._int64_feature(self._opts._depth),
-                                'label_classes': self._int64_feature(self._opts._nclasses),
-                                'seq_raw': self._bytes_feature(seq_raw),
-                                'label_raw': self._bytes_feature(label_raw),
-                                'garbage_label_raw': self._bytes_feature(garbage_label_raw),
-                                'structure_label_raw': self._bytes_feature(structure_label_raw),
-                            }))
+                            features=tf.train.Features(
+                                feature={
+                                    'windowlength': self._int64_feature(
+                                        self._opts._windowlength),
+                                    'structure_depth': self._int64_feature(
+                                        self._opts._structuredims),
+                                    'depth': self._int64_feature(
+                                        self._opts._depth),
+                                    'label_classes': self._int64_feature(
+                                        self._opts._nclasses),
+                                    'seq_raw': self._bytes_feature(seq_raw),
+                                    'label_raw': self._bytes_feature(label_raw),
+                                    'garbage_label_raw': self._bytes_feature(garbage_label_raw),
+                                    'structure_label_raw': self._bytes_feature(structure_label_raw),
+                                }))
                         self.writer.write(example.SerializeToString())
 
             elif not structure:
 
                 for i in range(self.examples_per_file):
-                    if include_garbage and  i % int(1/garbage_percentage) == 0:
+                    if include_garbage and i % int(
+                            1 / garbage_percentage) == 0:
                         # print("garbage_seq")
                         assert seq_tensor.shape == (self._opts._depth, self._opts._windowlength),\
                             "%s" % str(seq_tensor.shape)
@@ -1284,51 +1431,71 @@ class TFrecords_generator():
                         label_raw = label.tostring()
 
                         example = tf.train.Example(
-                            features=tf.train.Features(feature={
-                                'windowlength': self._int64_feature(self._opts._windowlength),
-                                'depth': self._int64_feature(self._opts._depth),
-                                'label_classes': self._int64_feature(self._opts._nclasses),
-                                'seq_raw': self._bytes_feature(seq_raw),
-                                'label_raw': self._bytes_feature(label_raw),
-                            }))
+                            features=tf.train.Features(
+                                feature={
+                                    'windowlength': self._int64_feature(
+                                        self._opts._windowlength),
+                                    'depth': self._int64_feature(
+                                        self._opts._depth),
+                                    'label_classes': self._int64_feature(
+                                        self._opts._nclasses),
+                                    'seq_raw': self._bytes_feature(seq_raw),
+                                    'label_raw': self._bytes_feature(label_raw),
+                                }))
                         self.writer.write(example.SerializeToString())
                     else:
                         # print("validseq")
                         try:
-                            oh_labels, seq_tensor, _, _, _ = self._process_csv(in_csv)
+                            oh_labels, seq_tensor, _, _, _ = self._process_csv(
+                                in_csv)
 
-                        except IndexError: # catches error from csv_decoder -> reopen the file:
+                        except IndexError:  # catches error from csv_decoder -> reopen the file:
                             in_csv.close()
                             if is_train:
-                                self.traindata = open(self._opts._traindata, 'r')
+                                self.traindata = open(
+                                    self._opts._traindata, 'r')
                                 in_csv = self.traindata
                             else:
-                                self.validdata = open(self._opts._validdata, 'r')
+                                self.validdata = open(
+                                    self._opts._validdata, 'r')
                                 in_csv = self.validdata
-                            oh_labels, seq_tensor, _, _, _ = self._process_csv(in_csv)
+                            oh_labels, seq_tensor, _, _, _ = self._process_csv(
+                                in_csv)
 
-                        assert seq_tensor.shape == (self._opts._depth, self._opts._windowlength)
+                        assert seq_tensor.shape == (
+                            self._opts._depth, self._opts._windowlength)
                         assert oh_labels.shape == (1, self._opts._nclasses)
                         # convert the features to a raw string:
                         seq_raw = seq_tensor.tostring()
                         label_raw = oh_labels.tostring()
 
                         example = tf.train.Example(
-                            features=tf.train.Features(feature={
-                                'windowlength': self._int64_feature(self._opts._windowlength),
-                                'depth': self._int64_feature(self._opts._depth),
-                                'label_classes': self._int64_feature(self._opts._nclasses),
-                                'seq_raw': self._bytes_feature(seq_raw),
-                                'label_raw': self._bytes_feature(label_raw),
-                            }))
+                            features=tf.train.Features(
+                                feature={
+                                    'windowlength': self._int64_feature(
+                                        self._opts._windowlength),
+                                    'depth': self._int64_feature(
+                                        self._opts._depth),
+                                    'label_classes': self._int64_feature(
+                                        self._opts._nclasses),
+                                    'seq_raw': self._bytes_feature(seq_raw),
+                                    'label_raw': self._bytes_feature(label_raw),
+                                }))
                         self.writer.write(example.SerializeToString())
             self.writer.close()
 
     def produce_train_valid(self):
         """Highlevel wrapper for the example_to_TF_records function."""
         assert self.mode.startswith('one_hot'), "mode must be 'one_hot_padded'"
-        self.example_to_TFrecords(is_train=True, garbage_percentage=0, structure=False)
-        self.example_to_TFrecords(is_train=False, garbage_percentage=0, structure=False)
+        self.example_to_TFrecords(
+            is_train=True,
+            garbage_percentage=0,
+            structure=False)
+        self.example_to_TFrecords(
+            is_train=False,
+            garbage_percentage=0,
+            structure=False)
+
 
 def plot_histogram(log_file, save_dir):
     """Simple plotting function to plot a hist from a specified file containing counts per labels.
@@ -1345,8 +1512,8 @@ def plot_histogram(log_file, save_dir):
                     count_dict[label] += 1
                 except KeyError:
                     count_dict[label] = 0
-    bars = [count_dict[label] for label in count_dict.keys()]
-    labels = [label for label in count_dict.keys()]
+    bars = [count_dict[label] for label in list(count_dict.keys())]
+    labels = [label for label in list(count_dict.keys())]
     set_style("whitegrid")
     fig, ax = plt.subplots()
     ax = barplot(x=bars, y=labels)
@@ -1368,8 +1535,14 @@ def _add_var_summary(var, name, collection=None):
             with tf.name_scope('stddev'):
                 stddev = tf.sqrt(tf.reduce_mean(tf.square(var - mean)))
             tf.summary.scalar('stddev', stddev, collections=collection)
-            tf.summary.scalar('max', tf.reduce_max(var), collections=collection)
-            tf.summary.scalar('min', tf.reduce_min(var), collections=collection)
+            tf.summary.scalar(
+                'max',
+                tf.reduce_max(var),
+                collections=collection)
+            tf.summary.scalar(
+                'min',
+                tf.reduce_min(var),
+                collections=collection)
             tf.summary.histogram('histogram', var, collections=collection)
 
 
@@ -1385,13 +1558,19 @@ def _variable_on_cpu(name, shape, initializer, trainable):
     Returns:
       A `tf.Variable` on CPU.
     """
-    with tf.device('/cpu:0'): #TODO will this work?
+    with tf.device('/cpu:0'):  # TODO will this work?
         dtype = tf.float32
-        var = tf.get_variable(name, shape, initializer=initializer, dtype=dtype, trainable=trainable)
+        var = tf.get_variable(
+            name,
+            shape,
+            initializer=initializer,
+            dtype=dtype,
+            trainable=trainable)
     #dtf.add_to_collection('CPU', var)
     return var
 
-def softmax(X, theta = 1.0, axis = None):
+
+def softmax(X, theta=1.0, axis=None):
     """Compute the softmax of each element along an axis of X.
 
     Args:
@@ -1412,16 +1591,18 @@ def softmax(X, theta = 1.0, axis = None):
     # multiply y against the theta parameter,
     y = y * float(theta)
     # subtract the max for numerical stability
-    y = y - np.expand_dims(np.max(y, axis = axis), axis)
+    y = y - np.expand_dims(np.max(y, axis=axis), axis)
     # exponentiate y
     y = np.exp(y)
     # take the sum along the specified axis
-    ax_sum = np.expand_dims(np.sum(y, axis = axis), axis)
+    ax_sum = np.expand_dims(np.sum(y, axis=axis), axis)
     # finally: divide elementwise
     p = y / ax_sum
     # flatten if X was 1D
-    if len(X.shape) == 1: p = p.flatten()
+    if len(X.shape) == 1:
+        p = p.flatten()
     return p
+
 
 def untar(file):
     """Untar a file in the current wd.
@@ -1433,8 +1614,5 @@ def untar(file):
         tar = tarfile.open(fname)
         tar.extractall()
         tar.close()
-    except:
+    except BaseException:
         print('ERROR: File is not a .tar.gz, or does not exist.')
-
-
-

@@ -19,5 +19,6 @@ def main():
     stats.plotdistoverseq(f_width=20, f_height=8, res=200, name='hist_HD.png')
     return
 
+
 if __name__ == '__main__':
     main()

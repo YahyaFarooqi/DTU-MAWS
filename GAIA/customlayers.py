@@ -40,14 +40,22 @@ def focal_lossIII(prediction_tensor,
     preds = tf.where(tf.equal(target_tensor, 1), preds, 1. - preds)
     #pos_losses = - tf.log(preds + epsilon) * target_tensor
     #neg_losses = - tf.log(preds + epsilon) * (1. - target_tensor) * ratio
-    losses = (1. - preds) ** gamma * tf.nn.sigmoid_cross_entropy_with_logits(labels=target_tensor,
-                                                                              logits=prediction_tensor)
+    losses = (
+        1. - preds) ** gamma * tf.nn.sigmoid_cross_entropy_with_logits(
+        labels=target_tensor,
+        logits=prediction_tensor)
 
-    #return tf.multiply(losses, weights)
+    # return tf.multiply(losses, weights)
     return losses
 
 
-def focal_loss(labels=[], logits=[], pos_weights=[], gamma=2., clips=[], name='focal_loss'):
+def focal_loss(
+        labels=[],
+        logits=[],
+        pos_weights=[],
+        gamma=2.,
+        clips=[],
+        name='focal_loss'):
     """
     Add focal loss weigths to the wigthted sigmoid cross entropy
     :return:
@@ -61,24 +69,45 @@ def focal_loss(labels=[], logits=[], pos_weights=[], gamma=2., clips=[], name='f
         # determine the focal loss weigths:
         labels = math_ops.to_float(labels)
         sigmoid_logits.get_shape().assert_is_compatible_with(labels.get_shape())
-        preds = array_ops.where(math_ops.equal(labels, 1.), sigmoid_logits, 1. - sigmoid_logits)
+        preds = array_ops.where(
+            math_ops.equal(
+                labels,
+                1.),
+            sigmoid_logits,
+            1. - sigmoid_logits)
         focal_weights = (math_ops.subtract(1., preds)) ** gamma
         print(focal_weights)
 
         # clip the weights at E-3 and E3
         up_clip = math_ops.multiply(tf.ones([batchsize, n_classes]), clips[1])
         low_clip = math_ops.multiply(tf.ones([batchsize, n_classes]), clips[0])
-        focal_weights = array_ops.where(math_ops.greater(focal_weights, clips[1]), up_clip, focal_weights)
-        focal_weights = array_ops.where(math_ops.less(focal_weights, clips[0]), low_clip, focal_weights)
+        focal_weights = array_ops.where(
+            math_ops.greater(
+                focal_weights,
+                clips[1]),
+            up_clip,
+            focal_weights)
+        focal_weights = array_ops.where(
+            math_ops.less(
+                focal_weights,
+                clips[0]),
+            low_clip,
+            focal_weights)
         log_weight = 1. + (pos_weights - 1.) * labels
 
         # now put them into a weighted softmax ce:
-        loss = math_ops.multiply(math_ops.add((1. - labels) * logits,
-                        log_weight * (math_ops.log1p(math_ops.exp(-math_ops.abs(logits))) + nn_ops.relu(-logits))),
-               focal_weights, name='sc_entropy')
+        loss = math_ops.multiply(math_ops.add((1. - labels) * logits, log_weight * (math_ops.log1p(
+            math_ops.exp(-math_ops.abs(logits))) + nn_ops.relu(-logits))), focal_weights, name='sc_entropy')
         return loss
 
-def focal_loss_alpha(labels=[], logits=[], pos_weights=[], gamma=2., clips=[], name='focal_loss'):
+
+def focal_loss_alpha(
+        labels=[],
+        logits=[],
+        pos_weights=[],
+        gamma=2.,
+        clips=[],
+        name='focal_loss'):
     """
     Add focal loss weigths to the wigthted sigmoid cross entropy
     :return:
@@ -92,24 +121,46 @@ def focal_loss_alpha(labels=[], logits=[], pos_weights=[], gamma=2., clips=[], n
         # determine the focal loss weigths:
         labels = math_ops.to_float(labels)
         sigmoid_logits.get_shape().assert_is_compatible_with(labels.get_shape())
-        preds = array_ops.where(math_ops.equal(labels, 1.), sigmoid_logits, 1. - sigmoid_logits)
+        preds = array_ops.where(
+            math_ops.equal(
+                labels,
+                1.),
+            sigmoid_logits,
+            1. - sigmoid_logits)
         focal_weights = (math_ops.subtract(1., preds)) ** gamma
         print(focal_weights)
 
         # clip the weights at E-3 and E3
         up_clip = math_ops.multiply(tf.ones([batchsize, n_classes]), clips[1])
         low_clip = math_ops.multiply(tf.ones([batchsize, n_classes]), clips[0])
-        focal_weights = array_ops.where(math_ops.greater(focal_weights, clips[1]), up_clip, focal_weights)
-        focal_weights = array_ops.where(math_ops.less(focal_weights, clips[0]), low_clip, focal_weights)
+        focal_weights = array_ops.where(
+            math_ops.greater(
+                focal_weights,
+                clips[1]),
+            up_clip,
+            focal_weights)
+        focal_weights = array_ops.where(
+            math_ops.less(
+                focal_weights,
+                clips[0]),
+            low_clip,
+            focal_weights)
         log_weight = 1. + (pos_weights - 1.) * labels
 
         # now put them into a weighted softmax ce:
-        loss = math_ops.multiply(math_ops.add((1. - labels) * logits,
-                         log_weight * (math_ops.log1p(math_ops.exp(-math_ops.abs(logits))) + nn_ops.relu(-logits))),
-                                 focal_weights, name='sc_entropy')
+        loss = math_ops.multiply(math_ops.add((1. - labels) * logits, log_weight * (math_ops.log1p(
+            math_ops.exp(-math_ops.abs(logits))) + nn_ops.relu(-logits))), focal_weights, name='sc_entropy')
         return loss
 
-def resnet_block(inlayer, channels=[128, 256], pool_dim=2, is_train=True, name='scope'):
+
+def resnet_block(
+        inlayer,
+        channels=[
+            128,
+            256],
+    pool_dim=2,
+    is_train=True,
+        name='scope'):
     """
     Define a resnet block for DeeProtein
     :param in_channels:
@@ -122,12 +173,15 @@ def resnet_block(inlayer, channels=[128, 256], pool_dim=2, is_train=True, name='
         with tf.variable_scope('conv1') as vs:
             conv = tl.layers.Conv1dLayer(inlayer,
                                          act=prelu,
-                                         shape=[3, channels[0], channels[1]],  # 32 features for each 5x5 patch
+                                         # 32 features for each 5x5 patch
+                                         shape=[3, channels[0], channels[1]],
                                          stride=1,
                                          padding='SAME',
-                                         W_init=tf.truncated_normal_initializer(stddev=5e-2),
+                                         W_init=tf.truncated_normal_initializer(
+                                             stddev=5e-2),
                                          W_init_args={},
-                                         b_init=tf.constant_initializer(value=0.1),
+                                         b_init=tf.constant_initializer(
+                                             value=0.1),
                                          b_init_args={},
                                          name='cnn_layer')
 
@@ -137,12 +191,16 @@ def resnet_block(inlayer, channels=[128, 256], pool_dim=2, is_train=True, name='
         with tf.variable_scope('conv2') as vs:
             conv = tl.layers.Conv1dLayer(norm,
                                          act=prelu,
-                                         shape=[3, channels[1], channels[1]*2],  # 32 features for each 5x5 patch
+                                         # 32 features for each 5x5 patch
+                                         shape=[
+                                             3, channels[1], channels[1] * 2],
                                          stride=1,
                                          padding='SAME',
-                                         W_init=tf.truncated_normal_initializer(stddev=5e-2),
+                                         W_init=tf.truncated_normal_initializer(
+                                             stddev=5e-2),
                                          W_init_args={},
-                                         b_init=tf.constant_initializer(value=0.1),
+                                         b_init=tf.constant_initializer(
+                                             value=0.1),
                                          b_init_args={},
                                          name='cnn_layer')
             norm = tl.layers.BatchNormLayer(conv, decay=0.9, epsilon=1e-05,
@@ -151,47 +209,73 @@ def resnet_block(inlayer, channels=[128, 256], pool_dim=2, is_train=True, name='
         with tf.variable_scope('1x1') as vs:
             conv = tl.layers.Conv1dLayer(norm,
                                          act=prelu,
-                                         shape=[1, channels[1]*2, channels[1]],  # 32 features for each 5x5 patch
+                                         # 32 features for each 5x5 patch
+                                         shape=[
+                                             1, channels[1] * 2, channels[1]],
                                          stride=1,
                                          padding='SAME',
-                                         W_init=tf.truncated_normal_initializer(stddev=5e-2),
+                                         W_init=tf.truncated_normal_initializer(
+                                             stddev=5e-2),
                                          W_init_args={},
-                                         b_init=tf.constant_initializer(value=0.1),
+                                         b_init=tf.constant_initializer(
+                                             value=0.1),
                                          b_init_args={},
                                          name='1x1_layer')
             y = tl.layers.BatchNormLayer(conv, decay=0.9, epsilon=1e-05,
-                                            is_train=is_train,
-                                            name='batchnorm_layer')
+                                         is_train=is_train,
+                                         name='batchnorm_layer')
         if pool_dim:
             with tf.variable_scope('pool') as vs:
-                y = PoolLayer1d(y, ksize=[pool_dim], strides=[pool_dim], padding='VALID', pooling_type="MAX", name='pool_layer')
+                y = PoolLayer1d(
+                    y,
+                    ksize=[pool_dim],
+                    strides=[pool_dim],
+                    padding='VALID',
+                    pooling_type="MAX",
+                    name='pool_layer')
 
         with tf.variable_scope('shortcut') as vs:
             # reduce the shortcut
             if pool_dim:
-                shortcut = PoolLayer1d(inlayer, ksize=[pool_dim], strides=[pool_dim], padding='VALID', pooling_type="MAX", name='pool_layer')
+                shortcut = PoolLayer1d(
+                    inlayer,
+                    ksize=[pool_dim],
+                    strides=[pool_dim],
+                    padding='VALID',
+                    pooling_type="MAX",
+                    name='pool_layer')
             else:
                 shortcut = inlayer
             # zero pad the channels
             if channels[0] != channels[1]:
-                paddings = [[0,0],
-                            [0,0],
-                            [0, channels[1]-channels[0]]
-                ]
+                paddings = [[0, 0],
+                            [0, 0],
+                            [0, channels[1] - channels[0]]
+                            ]
                 shortcut = PadLayer(shortcut, paddings=paddings)
 
             out = tl.layers.ElementwiseLayer([y, shortcut],
-                                            combine_fn=tf.add,
-                                            name='merge')
+                                             combine_fn=tf.add,
+                                             name='merge')
             return out
 
 
 def prelu(x):
-    v = tf.get_variable("prelu_weight", dtype=tf.float32, initializer=tf.constant(0.2))
-    return tf.where(tf.greater_equal(x, 0), x, x*v)
+    v = tf.get_variable(
+        "prelu_weight",
+        dtype=tf.float32,
+        initializer=tf.constant(0.2))
+    return tf.where(tf.greater_equal(x, 0), x, x * v)
 
 
-def binary_focal_loss(predictions, labels, gamma=2, alpha=1, weights=1.0, epsilon=1e-7, scope=None):
+def binary_focal_loss(
+        predictions,
+        labels,
+        gamma=2,
+        alpha=1,
+        weights=1.0,
+        epsilon=1e-7,
+        scope=None):
     """Adds a Focal Loss term to the training procedure.
 
     For each value x in `predictions`, and the corresponding l in `labels`,
@@ -262,7 +346,7 @@ def list_remove_repeat(l=None):
     ---------
     """
     l2 = []
-    [l2.append(i) for i in l if not i in l2]
+    [l2.append(i) for i in l if i not in l2]
     return l2
 
 
@@ -280,25 +364,31 @@ class PadLayer(Layer):
     name : a string or None
         An optional name to attach to this layer.
     """
+
     def __init__(
         self,
-        layer = None,
-        paddings = None,
-        mode = 'CONSTANT',
-        name = 'pad_layer',
+        layer=None,
+        paddings=None,
+        mode='CONSTANT',
+        name='pad_layer',
     ):
         Layer.__init__(self, name=name)
         assert paddings is not None, "paddings should be a Tensor of type int32. see https://www.tensorflow.org/api_docs/python/tf/pad"
         self.inputs = layer.outputs
-        print("  [TL] PadLayer   %s: paddings:%s mode:%s" %
-                            (self.name, list(paddings), mode))
+        print(("  [TL] PadLayer   %s: paddings:%s mode:%s" %
+               (self.name, list(paddings), mode)))
 
-        self.outputs = tf.pad(self.inputs, paddings=paddings, mode=mode, name=name)
+        self.outputs = tf.pad(
+            self.inputs,
+            paddings=paddings,
+            mode=mode,
+            name=name)
 
         self.all_layers = list(layer.all_layers)
         self.all_params = list(layer.all_params)
         self.all_drop = dict(layer.all_drop)
-        self.all_layers.extend( [self.outputs] )
+        self.all_layers.extend([self.outputs])
+
 
 def flatten_unknown(variable, name=''):
     """Reshapes high-dimension input to a vector.
@@ -327,6 +417,7 @@ def flatten_unknown(variable, name=''):
     """
     dim = tf.reduce_prod(tf.shape(variable)[1:])
     return tf.reshape(variable, shape=[-1, dim], name=name)
+
 
 class FlattenLayerCustomized(Layer):
     """
@@ -361,27 +452,31 @@ class FlattenLayerCustomized(Layer):
                        name ='pool_layer',)
     network = tl.layers.FlattenLayer(network, name='flatten_layer')
     """
+
     def __init__(
         self,
-        layer = None,
-        name ='flatten_layer',
+        layer=None,
+        name='flatten_layer',
     ):
         Layer.__init__(self, name=name)
         self.inputs = layer.outputs
         self.outputs = flatten_unknown(self.inputs, name=name)
         # self.n_units = int(self.outputs.get_shape()[-1])
         #self.n_units = tf.to_int32(tf.shape(self.outputs)[-1])
-        print("  [TL] FlattenLayer %s: unknown" % (self.name)) #, self.n_units))
+        # , self.n_units))
+        print(("  [TL] FlattenLayer %s: unknown" % (self.name)))
         self.all_layers = list(layer.all_layers)
         self.all_params = list(layer.all_params)
         self.all_drop = dict(layer.all_drop)
-        self.all_layers.extend( [self.outputs] )
+        self.all_layers.extend([self.outputs])
+
 
 class Pseudo1dDeconv(Layer):
     """
     Pseudo 1d deconv layer. We apply padding on the input to exactly fit the kernel without setting the
     padding in the deconv layer to 'SAME'. We do not want to pad in the deconv as we want to keep the width dimension constant
     """
+
     def __init__(
             self,
             layer=None,
@@ -396,6 +491,7 @@ class Pseudo1dDeconv(Layer):
         self.all_params = list(layer.all_params)
         self.all_drop = dict(layer.all_drop)
         self.all_layers.extend([self.outputs])
+
 
 def Pseudo1dDeconvBundle(input, n_out=128, kernel_size=[3, 3], name='deconv'):
     """
@@ -412,7 +508,8 @@ def Pseudo1dDeconvBundle(input, n_out=128, kernel_size=[3, 3], name='deconv'):
     :return:
     """
     with tf.variable_scope(name) as vs:
-        input_shape = input.get_shape().as_list() # should be shape [batchsize, height, width, channels]
+        # should be shape [batchsize, height, width, channels]
+        input_shape = input.get_shape().as_list()
 
         assert kernel_size[1] % 2 != 0
         assert kernel_size[0] == input_shape[1]
@@ -421,29 +518,36 @@ def Pseudo1dDeconvBundle(input, n_out=128, kernel_size=[3, 3], name='deconv'):
 
         paddings = [[0, 0], [0, 0], [padding_pos, padding_pos], [0, 0]]
 
-        pad_input = PadLayer(input, paddings=paddings, mode='CONSTANT', name='pad_layer')
+        pad_input = PadLayer(
+            input,
+            paddings=paddings,
+            mode='CONSTANT',
+            name='pad_layer')
 
         deconv = tl.layers.DeConv2dLayer(pad_input,
-                                         act=tf.nn.relu, # TODO: make PRELU great again?
+                                         act=tf.nn.relu,  # TODO: make PRELU great again?
                                          # shape is selected such that the length dim stays the same:
                                          # This means:
                                          shape=[kernel_size[0], kernel_size[1], n_out, input_shape[-1]],
-                                         output_shape=[input_shape[0], input_shape[1], input_shape[2]-2*padding_pos, n_out],
+                                         output_shape=[input_shape[0], input_shape[1], input_shape[2] - 2 * padding_pos, n_out],
                                          # TODO: compare this with the 1d output
                                          #output_shape=[input_shape[0], input_shape[1], 1, n_out],
                                          strides=[1, 5, 1, 1],
                                          padding='VALID',
-                                         W_init=tf.truncated_normal_initializer(stddev=0.02), #TODO check if this is too much
+                                         W_init=tf.truncated_normal_initializer(stddev=0.02),  # TODO check if this is too much
                                          b_init=tf.constant_initializer(value=0.01),
                                          W_init_args={}, b_init_args={},
                                          name='decnn2d_layer')
     return deconv
 
 
-def DeConv2d(net, n_out_channel = 32, filter_size=(3, 3),
-        out_size = (30, 30), strides = (2, 2), padding = 'SAME', batch_size = None, act = None,
-        W_init = tf.truncated_normal_initializer(stddev=0.02), b_init = tf.constant_initializer(value=0.0),
-        W_init_args = {}, b_init_args = {}, name ='decnn2d'):
+def DeConv2d(
+    net, n_out_channel=32, filter_size=(
+        3, 3), out_size=(
+            30, 30), strides=(
+                2, 2), padding='SAME', batch_size=None, act=None, W_init=tf.truncated_normal_initializer(
+                    stddev=0.02), b_init=tf.constant_initializer(
+                        value=0.0), W_init_args={}, b_init_args={}, name='decnn2d'):
     """Wrapper for :class:`DeConv2dLayer`, if you don't understand how to use :class:`DeConv2dLayer`, this function may be easier.
 
     Parameters
@@ -457,30 +561,42 @@ def DeConv2d(net, n_out_channel = 32, filter_size=(3, 3),
     act : None or activation function.
     others : see :class:`DeConv2dLayer`.
     """
-    assert len(strides) == 2, "len(strides) should be 2, DeConv2d and DeConv2dLayer are different."
+    assert len(
+        strides) == 2, "len(strides) should be 2, DeConv2d and DeConv2dLayer are different."
     if act is None:
         act = tf.identity
     if batch_size is None:
-    #     batch_size = tf.shape(net.outputs)[0]
+        #     batch_size = tf.shape(net.outputs)[0]
         fixed_batch_size = net.outputs.get_shape().with_rank_at_least(1)[0]
         if fixed_batch_size.value:
             batch_size = fixed_batch_size.value
         else:
             batch_size = tf.array_ops.shape(net.outputs)[0]
-    net = tl.layers.DeConv2dLayer(layer = net,
-                    act = act,
-                    shape = [filter_size[0], filter_size[1], n_out_channel, int(net.outputs.get_shape()[-1])],
-                    output_shape = [batch_size, int(out_size[0]), int(out_size[1]), n_out_channel],
-                    strides = [1, strides[0], strides[1], 1],
-                    padding = padding,
-                    W_init = W_init,
-                    b_init = b_init,
-                    W_init_args = W_init_args,
-                    b_init_args = b_init_args,
-                    name = name)
+    net = tl.layers.DeConv2dLayer(layer=net,
+                                  act=act,
+                                  shape=[filter_size[0],
+                                         filter_size[1],
+                                         n_out_channel,
+                                         int(net.outputs.get_shape()[-1])],
+                                  output_shape=[batch_size,
+                                                int(out_size[0]),
+                                                int(out_size[1]),
+                                                n_out_channel],
+                                  strides=[1,
+                                           strides[0],
+                                           strides[1],
+                                           1],
+                                  padding=padding,
+                                  W_init=W_init,
+                                  b_init=b_init,
+                                  W_init_args=W_init_args,
+                                  b_init_args=b_init_args,
+                                  name=name)
     return net
 
 # Copied from TensorLayer 1.3 API. We didn't want to upgrade.
+
+
 class StackLayer(Layer):
     """
     The :class:`StackLayer` class is layer for stacking a list of rank-R tensors into one rank-(R+1) tensor, see `tf.stack() <https://www.tensorflow.org/api_docs/python/tf/stack>`_.
@@ -494,11 +610,12 @@ class StackLayer(Layer):
     name : a string or None
         An optional name to attach to this layer.
     """
+
     def __init__(
         self,
-        layer = [],
-        axis = 0,
-        name ='stack',
+        layer=[],
+        axis=0,
+        name='stack',
     ):
         Layer.__init__(self, name=name)
         self.inputs = []
@@ -507,7 +624,7 @@ class StackLayer(Layer):
 
         self.outputs = tf.stack(self.inputs, axis=axis, name=name)
 
-        print("  [TL] StackLayer %s: axis: %d" % (self.name, axis))
+        print(("  [TL] StackLayer %s: axis: %d" % (self.name, axis)))
 
         self.all_layers = list(layer[0].all_layers)
         self.all_params = list(layer[0].all_params)
@@ -550,11 +667,12 @@ class ReshapeLayerCustomized(Layer):
     [ 5.  5.  5.]
     [ 6.  6.  6.]]]
     """
+
     def __init__(
         self,
         layer=None,
         batchsize=16,
-        to_shape=[1,1,1,1],
+        to_shape=[1, 1, 1, 1],
         name='reshape_layer',
     ):
         Layer.__init__(self, name=name)
@@ -562,7 +680,8 @@ class ReshapeLayerCustomized(Layer):
         splits = [t for t in tf.split(self.inputs, batchsize, axis=0)]
         reshaped = [tf.reshape(t, to_shape) for t in splits]
         self.outputs = tf.concat(reshaped, axis=0)
-        print("  [TL] ReshapeLayerCustomized %s: %s" % (self.name, self.outputs.get_shape()))
+        print(("  [TL] ReshapeLayerCustomized %s: %s" %
+              (self.name, self.outputs.get_shape())))
         self.all_layers = list(layer.all_layers)
         self.all_params = list(layer.all_params)
         self.all_drop = dict(layer.all_drop)
@@ -592,28 +711,34 @@ class PoolLayer1d(Layer):
     name : a string or None
         An optional name to attach to this layer.
     """
+
     def __init__(
         self,
-        layer = None,
-        ksize = [2],
-        strides = [2],
-        pooling_type = "MAX",
-        padding = 'SAME',
-        pool = tf.nn.pool,
-        name = 'pool_layer',
+        layer=None,
+        ksize=[2],
+        strides=[2],
+        pooling_type="MAX",
+        padding='SAME',
+        pool=tf.nn.pool,
+        name='pool_layer',
     ):
         Layer.__init__(self, name=name)
         self.inputs = layer.outputs
-        print("  [TL] PoolLayer   %s: ksize:%s strides:%s padding:%s pool:%s" %
-                            (self.name, str(ksize), str(strides), padding, pool.__name__))
+        print(("  [TL] PoolLayer   %s: ksize:%s strides:%s padding:%s pool:%s" %
+               (self.name, str(ksize), str(strides), padding, pool.__name__)))
 
-        self.outputs = pool(self.inputs, window_shape=ksize, pooling_type=pooling_type, strides=strides,
-                            padding=padding, name=name)
+        self.outputs = pool(
+            self.inputs,
+            window_shape=ksize,
+            pooling_type=pooling_type,
+            strides=strides,
+            padding=padding,
+            name=name)
 
         self.all_layers = list(layer.all_layers)
         self.all_params = list(layer.all_params)
         self.all_drop = dict(layer.all_drop)
-        self.all_layers.extend( [self.outputs] )
+        self.all_layers.extend([self.outputs])
 
 
 class SpatialPyramidPoolinglayer1d(Layer):
@@ -628,13 +753,25 @@ class SpatialPyramidPoolinglayer1d(Layer):
                 for level in range(levels):
                     ndiv = divsPerLevel ** level
                     assert ndiv > 0
-                    divLength = tf.cast(tf.ceil(tf.truediv(currLength, ndiv) - 1e-8), tf.int32)
+                    divLength = tf.cast(
+                        tf.ceil(
+                            tf.truediv(
+                                currLength,
+                                ndiv) - 1e-8),
+                        tf.int32)
                     for divIndex in range(ndiv):
                         divStart = 0 if ndiv <= 1 else tf.cast(
-                            tf.round(tf.truediv(currLength - divLength, ndiv - 1) * divIndex), tf.int32)
+                            tf.round(
+                                tf.truediv(
+                                    currLength -
+                                    divLength,
+                                    ndiv -
+                                    1) *
+                                divIndex),
+                            tf.int32)
                         pooledValues.append(tf.cond(tf.greater(divLength, 0), lambda: tf.reduce_max(
                             sequences[b, divStart:divStart + divLength, :], 0),
-                                                    lambda: tf.zeros(shape=[channels], dtype=tf.float32)))
+                            lambda: tf.zeros(shape=[channels], dtype=tf.float32)))
                 spp_count = len(pooledValues)
                 pooledValue = tf.stack(pooledValues, 0)
                 pooledValue.set_shape([spp_count, channels])
@@ -644,12 +781,12 @@ class SpatialPyramidPoolinglayer1d(Layer):
         return result
 
     def __init__(self,
-                 layer = None,
-                 lengths = None,
+                 layer=None,
+                 lengths=None,
                  pool_lvls=3,
                  pool_divs=4,
                  mode='max',
-                 name = 'SPPlayer'
+                 name='SPPlayer'
                  ):
         Layer.__init__(self, name=name)
         self.inputs = layer.outputs
@@ -660,13 +797,16 @@ class SpatialPyramidPoolinglayer1d(Layer):
         self.results = []
         self.out_dim = 0
 
-        print("  [TL] SPPLayer   %s: pool_lvls:%s pool_divs:%s mode:%s" %
-              (self.name, str(pool_lvls), str(pool_divs), mode))
+        print(("  [TL] SPPLayer   %s: pool_lvls:%s pool_divs:%s mode:%s" %
+              (self.name, str(pool_lvls), str(pool_divs), mode)))
 
-        self.outputs = self.spp(self.inputs, self.lengths, pool_lvls, pool_divs)
+        self.outputs = self.spp(
+            self.inputs,
+            self.lengths,
+            pool_lvls,
+            pool_divs)
 
         self.all_layers = list(layer.all_layers)
         self.all_params = list(layer.all_params)
         self.all_drop = dict(layer.all_drop)
-        self.all_layers.extend( [self.outputs] )
-
+        self.all_layers.extend([self.outputs])

@@ -4,9 +4,10 @@ Train a DeeProtein-model.
 """
 import argparse
 import json
-from DeeProtein import DeeProtein
-import helpers
+from .DeeProtein import DeeProtein
+from . import helpers
 import os
+
 
 def main():
     with open(FLAGS.config_json) as config_fobj:
@@ -20,6 +21,7 @@ def main():
     optionhandler = helpers.OptionHandler(config_dict)
     model = DeeProtein(optionhandler)
     model.train(restore_whole=FLAGS.restore_whole, binary=True)
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -42,6 +44,6 @@ if __name__ == '__main__':
              '(optional). Defaults to True.')
     FLAGS, unparsed = parser.parse_known_args()
     if unparsed:
-        print('Error, unrecognized flags:', unparsed)
+        print(('Error, unrecognized flags:', unparsed))
         exit(-1)
     main()

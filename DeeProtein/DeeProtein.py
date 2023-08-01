@@ -1,8 +1,10 @@
-import helpers
-import customlayers
+from . import helpers
+from . import customlayers
 import tensorlayer as tl
 import tensorflow as tf
-import time, os, glob
+import time
+import os
+import glob
 import string
 import json
 import wget
@@ -11,7 +13,7 @@ import re
 from tensorflow.contrib.tensorboard.plugins import projector
 from collections import OrderedDict
 from sklearn import decomposition
-np.set_printoptions(threshold=np.inf) #for debug
+np.set_printoptions(threshold=np.inf)  # for debug
 
 
 class DeeProtein():
@@ -28,6 +30,7 @@ class DeeProtein():
       batchgen: A `helpers.BatchGenerator`, holds the class_dict.
       ROCtracker: A `helpers.ROCtracker` that calculates the metrics for the calidation.
     """
+
     def __init__(self, optionhandler, inference=False):
         self._opts = optionhandler
         self._opts.write_dict()
@@ -38,9 +41,11 @@ class DeeProtein():
         self.batchgen = ''
         self.ROCtracker = ''
         if not inference:
-            self.log_file = open(self._opts._summariesdir + '/model.log', "w", 1)
+            self.log_file = open(
+                self._opts._summariesdir + '/model.log', "w", 1)
         else:
-            self.log_file = open(self._opts._summariesdir + '/inference.log', "w", 1)
+            self.log_file = open(
+                self._opts._summariesdir + '/inference.log', "w", 1)
         self.valid_graph_initialized = False
 
     def restore_model_from_checkpoint(self, ckptpath, session):
@@ -78,10 +83,10 @@ class DeeProtein():
         if not os.path.exists(param_save_dir):
             os.makedirs(param_save_dir)
         if conv_vars:
-            tl.files.save_npz_dict(conv_vars,
-                                   name=os.path.join(param_save_dir,
-                                                     '%s_conv_part.npz' % name),
-                                   sess=session)
+            tl.files.save_npz_dict(
+                conv_vars, name=os.path.join(
+                    param_save_dir, '%s_conv_part.npz' %
+                    name), sess=session)
         tl.files.save_npz_dict(network.all_params,
                                name=os.path.join(param_save_dir,
                                                  '%s_complete.npz' % name),
@@ -110,7 +115,11 @@ class DeeProtein():
                     chars.append('_')
             return ''.join(chars)
 
-        param_save_dir = os.path.join(os.path.join(self._opts._summariesdir, 'checkpoints'), 'inference_params')
+        param_save_dir = os.path.join(
+            os.path.join(
+                self._opts._summariesdir,
+                'checkpoints'),
+            'inference_params')
         if not os.path.exists(param_save_dir):
             os.makedirs(param_save_dir)
 
@@ -122,11 +131,13 @@ class DeeProtein():
         manifest = OrderedDict()
         for p in network.all_params:
             name = p.name.rstrip(':0')
-            if (ignore and
-                    re.match(remove_vars_compiled_re, name)) or name == 'global_step':
+            if (ignore and re.match(remove_vars_compiled_re, name)
+                ) or name == 'global_step':
                 continue
             var_filename = _var_name_to_filename(name)
-            manifest[name] = {'filename': var_filename, 'shape': p.get_shape().as_list()}
+            manifest[name] = {
+                'filename': var_filename,
+                'shape': p.get_shape().as_list()}
             with open(os.path.join(param_save_dir, var_filename), 'wb') as f:
                 f.write(p.eval(session=session).tobytes())
 
@@ -168,19 +179,27 @@ class DeeProtein():
         file = os.path.join(self._opts._restorepath, '%s_conv_part.npz' % name)
         self.log_file.write('[*] Loading %s\n' % file)
         if not tl.files.file_exists(file):
-            self.log_file.write('[*] Loading %s FAILED. File not found.\n' % file)
-            self.log_file.write('Trying to download weights from iGEM-HD-2017.\n')
+            self.log_file.write(
+                '[*] Loading %s FAILED. File not found.\n' %
+                file)
+            self.log_file.write(
+                'Trying to download weights from iGEM-HD-2017.\n')
             weights_dir = self.download_weights()
             file = os.path.join(weights_dir, '%s_conv_part.npz' % name)
             if not tl.files.file_exists(file):
-                self.log_file.write('[*] Download weights from iGEM-HD-2017 FAILED. ABORTING.\n')
+                self.log_file.write(
+                    '[*] Download weights from iGEM-HD-2017 FAILED. ABORTING.\n')
                 exit(-1)
             else:
                 self.log_file.write('Download successful.\n')
                 pass
         # custom load_ckpt op:
         d = np.load(file)
-        params = [val[1] for val in sorted(d.items(), key=lambda tup: int(tup[0]))]
+        params = [
+            val[1] for val in sorted(
+                list(
+                    d.items()), key=lambda tup: int(
+                    tup[0]))]
         # params = [p for p in params if not 'outlayer' in p.name]
         # original OP:
         # params = tl.files.load_npz_dict(name=file)
@@ -206,25 +225,35 @@ class DeeProtein():
         # check if filepath exists:
         file = os.path.join(self._opts._restorepath, '%s_complete.npz' % name)
         if not tl.files.file_exists(file):
-            self.log_file.write('[*] Loading %s FAILED. File not found.\n' % file)
+            self.log_file.write(
+                '[*] Loading %s FAILED. File not found.\n' %
+                file)
             if self._opts._nclasses == 886:
-                self.log_file.write('[*] Suitable weigths found on iGEM-Servers.\n')
-                self.log_file.write('Trying to download weights from iGEM-HD-2017.\n')
+                self.log_file.write(
+                    '[*] Suitable weigths found on iGEM-Servers.\n')
+                self.log_file.write(
+                    'Trying to download weights from iGEM-HD-2017.\n')
                 weights_dir = self.download_weights()
                 file = os.path.join(weights_dir, '%s_conv_part.npz' % name)
                 if not tl.files.file_exists(file):
-                    self.log_file.write('[*] Download weights from iGEM-HD-2017 FAILED. ABORTING.\n')
+                    self.log_file.write(
+                        '[*] Download weights from iGEM-HD-2017 FAILED. ABORTING.\n')
                     exit(-1)
                 else:
                     self.log_file.write('Download successful.\n')
                     pass
             else:
-                self.log_file.write('[*] No suitable weights on Servers. ABORTING.\n')
+                self.log_file.write(
+                    '[*] No suitable weights on Servers. ABORTING.\n')
                 exit(-1)
 
         # custom load_ckpt op:
         d = np.load(file)
-        params = [val[1] for val in sorted(d.items(), key=lambda tup: int(tup[0]))]
+        params = [
+            val[1] for val in sorted(
+                list(
+                    d.items()), key=lambda tup: int(
+                    tup[0]))]
         tl.files.assign_params(session, params, network)
         self.log_file.write('[*] Restored model weights!\n')
         print('[*] Restored model weights!\n')
@@ -249,12 +278,18 @@ class DeeProtein():
         if tl.files.file_exists(file):
             # custom load_ckpt op:
             d = np.load(file)
-            params = [val[1] for val in sorted(d.items(), key=lambda tup: int(tup[0]))]
+            params = [
+                val[1] for val in sorted(
+                    list(
+                        d.items()), key=lambda tup: int(
+                        tup[0]))]
             tl.files.assign_params(session, params, network)
             self.log_file.write('[*] Restored model for inference!\n')
             return network
         else:
-            self.log_file.write('[*] Loading %s FAILED. File not found.\n' % file)
+            self.log_file.write(
+                '[*] Loading %s FAILED. File not found.\n' %
+                file)
             return False
 
     def check_data(self, tfrecords_filename):
@@ -265,14 +300,16 @@ class DeeProtein():
         Args
           tfrecords_filename: `str`, the path to the `tf.records` file to check.
         """
-        record_iterator = tf.python_io.tf_record_iterator(path=tfrecords_filename)
+        record_iterator = tf.python_io.tf_record_iterator(
+            path=tfrecords_filename)
 
         for string_record in record_iterator:
             # Parse the next example
             example = tf.train.Example()
             example.ParseFromString(string_record)
 
-            # Get the features you stored (change to match your tfrecord writing code)
+            # Get the features you stored (change to match your tfrecord
+            # writing code)
             seq = (example.features.feature['seq_raw']
                    .bytes_list
                    .value[0])
@@ -281,13 +318,14 @@ class DeeProtein():
                      .bytes_list
                      .value[0])
 
-            # Convert to a numpy array (change dtype to the datatype you stored)
+            # Convert to a numpy array (change dtype to the datatype you
+            # stored)
             seq_array = np.fromstring(seq, dtype=np.float64)
             label_array = np.fromstring(label, dtype=np.float64)
 
             # Print the image shape; does it match your expectations?
-            print(seq_array.shape)
-            print(label_array.shape)
+            print((seq_array.shape))
+            print((label_array.shape))
 
     def check_data_comprehensively(self, file_paths, valid_mode=True):
         """Check the dataformat and content of a tf.records file.
@@ -298,11 +336,15 @@ class DeeProtein():
           tfrecords_filename: `str`, the path to the `tf.records` file to check.
           valid_mode: `bool`, holds True if model is in valid mode (defaults to True).
         """
-        filename_queue = tf.train.string_input_producer(file_paths,
-                                                        num_epochs=None,
-                                                        shuffle=False, seed=None,
-                                                        capacity=10, shared_name=None,
-                                                        name='fileQueue', cancel_op=None)
+        filename_queue = tf.train.string_input_producer(
+            file_paths,
+            num_epochs=None,
+            shuffle=False,
+            seed=None,
+            capacity=10,
+            shared_name=None,
+            name='fileQueue',
+            cancel_op=None)
         id = 'valid' if valid_mode else 'train'
 
         reader = tf.TFRecordReader()
@@ -319,8 +361,16 @@ class DeeProtein():
                     'label_raw': tf.FixedLenFeature([], tf.string),
                 }
             )
-            seq_tensor = tf.cast(tf.decode_raw(features['seq_raw'], tf.float64), tf.float32)
-            label = tf.cast(tf.decode_raw(features['label_raw'], tf.float64), tf.float32)
+            seq_tensor = tf.cast(
+                tf.decode_raw(
+                    features['seq_raw'],
+                    tf.float64),
+                tf.float32)
+            label = tf.cast(
+                tf.decode_raw(
+                    features['label_raw'],
+                    tf.float64),
+                tf.float32)
 
             # tf.Print(seq_tensor, [seq_tensor])
             # tf.Print(label, [label])
@@ -328,7 +378,7 @@ class DeeProtein():
             windowlength = tf.cast(features['windowlength'], tf.int32)
             depth = tf.cast(features['depth'], tf.int32)
 
-            #TODO check if we neeed this
+            # TODO check if we neeed this
             n_classes = tf.cast(features['label_classes'], tf.int32)
 
             seq_shape = tf.stack([depth, windowlength])
@@ -337,9 +387,11 @@ class DeeProtein():
             seq_tensor = tf.expand_dims(tf.reshape(seq_tensor, seq_shape), -1)
 
             if self._opts._batchgenmode.startswith('one_hot'):
-                seq_tensor.set_shape([self._opts._depth, self._opts._windowlength, 1])
+                seq_tensor.set_shape(
+                    [self._opts._depth, self._opts._windowlength, 1])
             elif self._opts._batchgenmode.startswith('embed'):
-                seq_tensor.set_shape([self._opts._embeddingdim, self._opts._windowlength, 1])
+                seq_tensor.set_shape(
+                    [self._opts._embeddingdim, self._opts._windowlength, 1])
 
             #label = tf.reshape(label, label_shape)
             label.set_shape([self._opts._nclasses])
@@ -349,17 +401,18 @@ class DeeProtein():
                 check_data_sess.run(tf.global_variables_initializer())
                 check_data_sess.run(tf.local_variables_initializer())
                 coord = tf.train.Coordinator()
-                threads = tf.train.start_queue_runners(coord=coord, sess=check_data_sess)
-                #print(self.batchgen.class_dict)
+                threads = tf.train.start_queue_runners(
+                    coord=coord, sess=check_data_sess)
+                # print(self.batchgen.class_dict)
 
                 for _ in range(10000000000):
 
                     seqx, labelx = check_data_sess.run([seq_tensor, label])
                     seqx = np.asarray(seqx)
                     labelx = np.asarray(labelx)
-                    print(seqx.shape)
-                    print(labelx.shape)
-                    print(np.argmax(labelx, axis=0))
+                    print((seqx.shape))
+                    print((labelx.shape))
+                    print((np.argmax(labelx, axis=0)))
 
             # gracefully shut down the queue
             coord.request_stop()
@@ -382,13 +435,20 @@ class DeeProtein():
           garbage_labels: Depracted.
           structure_label: Depracted.
         """
-        print('%d files found' % len(file_paths))
+        print(('%d files found' % len(file_paths)))
 
-        #set epochs to 1 in validation mode:
+        # set epochs to 1 in validation mode:
         epochs = self._opts._numepochs if not valid_mode else 1
 
-        filename_queue = tf.train.string_input_producer(file_paths, num_epochs=epochs, shuffle=False, seed=None,
-                                                        capacity=100, shared_name=None, name='fileQueue', cancel_op=None)
+        filename_queue = tf.train.string_input_producer(
+            file_paths,
+            num_epochs=epochs,
+            shuffle=False,
+            seed=None,
+            capacity=100,
+            shared_name=None,
+            name='fileQueue',
+            cancel_op=None)
 
         id = 'valid' if valid_mode else 'train'
 
@@ -407,9 +467,16 @@ class DeeProtein():
                 }
             )
             if self._opts._batchgenmode.startswith('one_hot'):
-                seq_tensor = tf.cast(tf.decode_raw(features['seq_raw'], tf.float64),
-                                     tf.float32)
-            label = tf.cast(tf.decode_raw(features['label_raw'], tf.float64), tf.float32)
+                seq_tensor = tf.cast(
+                    tf.decode_raw(
+                        features['seq_raw'],
+                        tf.float64),
+                    tf.float32)
+            label = tf.cast(
+                tf.decode_raw(
+                    features['label_raw'],
+                    tf.float64),
+                tf.float32)
             windowlength = tf.cast(features['windowlength'], tf.int32)
             depth = tf.cast(features['depth'], tf.int32)
             n_classes = tf.cast(features['label_classes'], tf.int32)
@@ -419,9 +486,11 @@ class DeeProtein():
             seq_tensor = tf.expand_dims(tf.reshape(seq_tensor, seq_shape), -1)
 
             if self._opts._batchgenmode.startswith('one_hot'):
-                seq_tensor.set_shape([self._opts._depth, self._opts._windowlength, 1])
+                seq_tensor.set_shape(
+                    [self._opts._depth, self._opts._windowlength, 1])
             elif self._opts._batchgenmode.startswith('embed'):
-                seq_tensor.set_shape([self._opts._embeddingdim, self._opts._windowlength, 1])
+                seq_tensor.set_shape(
+                    [self._opts._embeddingdim, self._opts._windowlength, 1])
             label.set_shape([self._opts._nclasses])
 
             time.sleep(10)
@@ -430,13 +499,13 @@ class DeeProtein():
 
             # get a batch generator and shuffler:
             batch, labels = \
-                            tf.train.shuffle_batch([seq_tensor, label],
-                                        batch_size=self._opts._batchsize,
-                                        # save 4 spots for the garbage
-                                        num_threads=self._opts._numthreads,
-                                        capacity=500 * self._opts._numthreads,
-                                        min_after_dequeue=50 * self._opts._numthreads,
-                                        enqueue_many=False)
+                tf.train.shuffle_batch([seq_tensor, label],
+                                       batch_size=self._opts._batchsize,
+                                       # save 4 spots for the garbage
+                                       num_threads=self._opts._numthreads,
+                                       capacity=500 * self._opts._numthreads,
+                                       min_after_dequeue=50 * self._opts._numthreads,
+                                       enqueue_many=False)
 
             return batch, labels, garbage_labels, structure_labels
 
@@ -461,193 +530,410 @@ class DeeProtein():
         with tf.variable_scope('model%s' % name_suffix) as vs:
             tl.layers.set_name_reuse(True)
 
-            seq_in_layer = tl.layers.InputLayer(seq_input, name='seq_input_layer%s' % name_suffix)
+            seq_in_layer = tl.layers.InputLayer(
+                seq_input, name='seq_input_layer%s' %
+                name_suffix)
 
-########################################################################################################################
+##########################################################################
 #                                                   Encoder                                                            #
-########################################################################################################################
+##########################################################################
             print('[*] ENCODER')
             with tf.variable_scope('encoder') as vs:
                 with tf.variable_scope('embedding') as vs:
-                    embedding = tl.layers.Conv2dLayer(seq_in_layer,
-                                          act=customlayers.prelu,
-                                          shape=[20, 1, 1, 64],
-                                          strides=[1, 1, 1, 1],
-                                          padding='VALID',
-                                          W_init=tf.truncated_normal_initializer(stddev=5e-2),
-                                          W_init_args={},
-                                          b_init=tf.constant_initializer(value=0.1),
-                                          b_init_args = {},
-                                          name='1x1%s' % name_suffix)
-                    embedding = tl.layers.BatchNormLayer(embedding, decay=0.9, epsilon=1e-05,
-                                                   is_train=self.is_train,
-                                                   name='batchnorm_layer%s' % name_suffix)
+                    embedding = tl.layers.Conv2dLayer(
+                        seq_in_layer,
+                        act=customlayers.prelu,
+                        shape=[
+                            20,
+                            1,
+                            1,
+                            64],
+                        strides=[
+                            1,
+                            1,
+                            1,
+                            1],
+                        padding='VALID',
+                        W_init=tf.truncated_normal_initializer(
+                            stddev=5e-2),
+                        W_init_args={},
+                        b_init=tf.constant_initializer(
+                            value=0.1),
+                        b_init_args={},
+                        name='1x1%s' %
+                        name_suffix)
+                    embedding = tl.layers.BatchNormLayer(
+                        embedding,
+                        decay=0.9,
+                        epsilon=1e-05,
+                        is_train=self.is_train,
+                        name='batchnorm_layer%s' %
+                        name_suffix)
                     output_shape = embedding.outputs.get_shape().as_list()
-                    embedding.outputs = tf.reshape(embedding.outputs,
-                                                   shape=[self._opts._batchsize,
-                                                          output_shape[2],
-                                                          output_shape[3]])
-                    helpers._add_var_summary(embedding.outputs,
-                                             'conv', collection=self.summary_collection)
+                    embedding.outputs = tf.reshape(
+                        embedding.outputs,
+                        shape=[
+                            self._opts._batchsize,
+                            output_shape[2],
+                            output_shape[3]])
+                    helpers._add_var_summary(
+                        embedding.outputs, 'conv', collection=self.summary_collection)
 
-                resnet = customlayers.resnet_block(embedding, channels=[64, 128],
-                                                   pool_dim=2, is_train=self.is_train,
-                                                   name='res1', summary_collection=self.summary_collection)
-                resnet = customlayers.resnet_block(resnet, channels=[128, 256],
-                                                   pool_dim=2, is_train=self.is_train,
-                                                   name='res2', summary_collection=self.summary_collection)
-                resnet = customlayers.resnet_block(resnet, channels=[256, 256],
-                                                   pool_dim=2, is_train=self.is_train,
-                                                   name='res3', summary_collection=self.summary_collection)
-                resnet = customlayers.resnet_block(resnet, channels=[256, 256],
-                                                   pool_dim=2, is_train=self.is_train,
-                                                   name='res4', summary_collection=self.summary_collection)
-                resnet = customlayers.resnet_block(resnet, channels=[256, 256],
-                                                   pool_dim=2, is_train=self.is_train,
-                                                   name='res5', summary_collection=self.summary_collection)
-                resnet = customlayers.resnet_block(resnet, channels=[256, 256],
-                                                   pool_dim=3, is_train=self.is_train,
-                                                   name='res6', summary_collection=self.summary_collection)
-                resnet = customlayers.resnet_block(resnet, channels=[256, 256],
-                                                   pool_dim=2, is_train=self.is_train,
-                                                   name='res7', summary_collection=self.summary_collection)
-                resnet = customlayers.resnet_block(resnet, channels=[256, 256],
-                                                   pool_dim=None, is_train=self.is_train,
-                                                   name='res8', summary_collection=self.summary_collection)
-                resnet = customlayers.resnet_block(resnet, channels=[256, 256],
-                                                   pool_dim=None, is_train=self.is_train,
-                                                   name='res9', summary_collection=self.summary_collection)
-                resnet = customlayers.resnet_block(resnet, channels=[256, 256],
-                                                   pool_dim=None, is_train=self.is_train,
-                                                   name='res10', summary_collection=self.summary_collection)
-                resnet = customlayers.resnet_block(resnet, channels=[256, 256],
-                                                   pool_dim=None, is_train=self.is_train,
-                                                   name='res11', summary_collection=self.summary_collection)
-                resnet = customlayers.resnet_block(resnet, channels=[256, 256],
-                                                   pool_dim=2, is_train=self.is_train,
-                                                   name='res12', summary_collection=self.summary_collection)
-                resnet = customlayers.resnet_block(resnet, channels=[256, 256],
-                                                   pool_dim=None, is_train=self.is_train,
-                                                   name='res13', summary_collection=self.summary_collection)
-                resnet = customlayers.resnet_block(resnet, channels=[256, 256],
-                                                   pool_dim=None, is_train=self.is_train,
-                                                   name='res14', summary_collection=self.summary_collection)
-                resnet = customlayers.resnet_block(resnet, channels=[256, 256],
-                                                   pool_dim=None, is_train=self.is_train,
-                                                   name='res15', summary_collection=self.summary_collection)
-                resnet = customlayers.resnet_block(resnet, channels=[256, 256],
-                                                   pool_dim=None, is_train=self.is_train,
-                                                   name='res16', summary_collection=self.summary_collection)
-                resnet = customlayers.resnet_block(resnet, channels=[256, 256],
-                                                   pool_dim=None, is_train=self.is_train,
-                                                   name='res17', summary_collection=self.summary_collection)
-                resnet = customlayers.resnet_block(resnet, channels=[256, 256],
-                                                   pool_dim=None, is_train=self.is_train,
-                                                   name='res18', summary_collection=self.summary_collection)
-                resnet = customlayers.resnet_block(resnet, channels=[256, 256],
-                                                   pool_dim=None, is_train=self.is_train,
-                                                   name='res19', summary_collection=self.summary_collection)
-                resnet = customlayers.resnet_block(resnet, channels=[256, 256],
-                                                   pool_dim=None, is_train=self.is_train,
-                                                   name='res20', summary_collection=self.summary_collection)
-                resnet = customlayers.resnet_block(resnet, channels=[256, 256],
-                                                   pool_dim=None, is_train=self.is_train,
-                                                   name='res21', summary_collection=self.summary_collection)
-                resnet = customlayers.resnet_block(resnet, channels=[256, 256],
-                                                   pool_dim=None, is_train=self.is_train,
-                                                   name='res22', summary_collection=self.summary_collection)
-                resnet = customlayers.resnet_block(resnet, channels=[256, 256],
-                                                   pool_dim=None, is_train=self.is_train,
-                                                   name='res23', summary_collection=self.summary_collection)
-                resnet = customlayers.resnet_block(resnet, channels=[256, 256],
-                                                   pool_dim=None, is_train=self.is_train,
-                                                   name='res24', summary_collection=self.summary_collection)
-                resnet = customlayers.resnet_block(resnet, channels=[256, 256],
-                                                   pool_dim=None, is_train=self.is_train,
-                                                   name='res25', summary_collection=self.summary_collection)
-                resnet = customlayers.resnet_block(resnet, channels=[256, 256],
-                                                   pool_dim=None, is_train=self.is_train,
-                                                   name='res26', summary_collection=self.summary_collection)
-                resnet = customlayers.resnet_block(resnet, channels=[256, 256],
-                                                   pool_dim=None, is_train=self.is_train,
-                                                   name='res27', summary_collection=self.summary_collection)
-                resnet = customlayers.resnet_block(resnet, channels=[256, 512],
-                                                   pool_dim=None, is_train=self.is_train,
-                                                   name='res28', summary_collection=self.summary_collection)
-                encoder = customlayers.resnet_block(resnet, channels=[512, 512],
-                                                    pool_dim=2, is_train=self.is_train,
-                                                    name='res29', summary_collection=self.summary_collection)
-                self.encoder = encoder #store the encoder in an attribute for easy access
-                print('Final shape: ' + str(encoder.outputs.get_shape().as_list()))
+                resnet = customlayers.resnet_block(
+                    embedding,
+                    channels=[
+                        64,
+                        128],
+                    pool_dim=2,
+                    is_train=self.is_train,
+                    name='res1',
+                    summary_collection=self.summary_collection)
+                resnet = customlayers.resnet_block(
+                    resnet,
+                    channels=[
+                        128,
+                        256],
+                    pool_dim=2,
+                    is_train=self.is_train,
+                    name='res2',
+                    summary_collection=self.summary_collection)
+                resnet = customlayers.resnet_block(
+                    resnet,
+                    channels=[
+                        256,
+                        256],
+                    pool_dim=2,
+                    is_train=self.is_train,
+                    name='res3',
+                    summary_collection=self.summary_collection)
+                resnet = customlayers.resnet_block(
+                    resnet,
+                    channels=[
+                        256,
+                        256],
+                    pool_dim=2,
+                    is_train=self.is_train,
+                    name='res4',
+                    summary_collection=self.summary_collection)
+                resnet = customlayers.resnet_block(
+                    resnet,
+                    channels=[
+                        256,
+                        256],
+                    pool_dim=2,
+                    is_train=self.is_train,
+                    name='res5',
+                    summary_collection=self.summary_collection)
+                resnet = customlayers.resnet_block(
+                    resnet,
+                    channels=[
+                        256,
+                        256],
+                    pool_dim=3,
+                    is_train=self.is_train,
+                    name='res6',
+                    summary_collection=self.summary_collection)
+                resnet = customlayers.resnet_block(
+                    resnet,
+                    channels=[
+                        256,
+                        256],
+                    pool_dim=2,
+                    is_train=self.is_train,
+                    name='res7',
+                    summary_collection=self.summary_collection)
+                resnet = customlayers.resnet_block(
+                    resnet,
+                    channels=[
+                        256,
+                        256],
+                    pool_dim=None,
+                    is_train=self.is_train,
+                    name='res8',
+                    summary_collection=self.summary_collection)
+                resnet = customlayers.resnet_block(
+                    resnet,
+                    channels=[
+                        256,
+                        256],
+                    pool_dim=None,
+                    is_train=self.is_train,
+                    name='res9',
+                    summary_collection=self.summary_collection)
+                resnet = customlayers.resnet_block(
+                    resnet,
+                    channels=[
+                        256,
+                        256],
+                    pool_dim=None,
+                    is_train=self.is_train,
+                    name='res10',
+                    summary_collection=self.summary_collection)
+                resnet = customlayers.resnet_block(
+                    resnet,
+                    channels=[
+                        256,
+                        256],
+                    pool_dim=None,
+                    is_train=self.is_train,
+                    name='res11',
+                    summary_collection=self.summary_collection)
+                resnet = customlayers.resnet_block(
+                    resnet,
+                    channels=[
+                        256,
+                        256],
+                    pool_dim=2,
+                    is_train=self.is_train,
+                    name='res12',
+                    summary_collection=self.summary_collection)
+                resnet = customlayers.resnet_block(
+                    resnet,
+                    channels=[
+                        256,
+                        256],
+                    pool_dim=None,
+                    is_train=self.is_train,
+                    name='res13',
+                    summary_collection=self.summary_collection)
+                resnet = customlayers.resnet_block(
+                    resnet,
+                    channels=[
+                        256,
+                        256],
+                    pool_dim=None,
+                    is_train=self.is_train,
+                    name='res14',
+                    summary_collection=self.summary_collection)
+                resnet = customlayers.resnet_block(
+                    resnet,
+                    channels=[
+                        256,
+                        256],
+                    pool_dim=None,
+                    is_train=self.is_train,
+                    name='res15',
+                    summary_collection=self.summary_collection)
+                resnet = customlayers.resnet_block(
+                    resnet,
+                    channels=[
+                        256,
+                        256],
+                    pool_dim=None,
+                    is_train=self.is_train,
+                    name='res16',
+                    summary_collection=self.summary_collection)
+                resnet = customlayers.resnet_block(
+                    resnet,
+                    channels=[
+                        256,
+                        256],
+                    pool_dim=None,
+                    is_train=self.is_train,
+                    name='res17',
+                    summary_collection=self.summary_collection)
+                resnet = customlayers.resnet_block(
+                    resnet,
+                    channels=[
+                        256,
+                        256],
+                    pool_dim=None,
+                    is_train=self.is_train,
+                    name='res18',
+                    summary_collection=self.summary_collection)
+                resnet = customlayers.resnet_block(
+                    resnet,
+                    channels=[
+                        256,
+                        256],
+                    pool_dim=None,
+                    is_train=self.is_train,
+                    name='res19',
+                    summary_collection=self.summary_collection)
+                resnet = customlayers.resnet_block(
+                    resnet,
+                    channels=[
+                        256,
+                        256],
+                    pool_dim=None,
+                    is_train=self.is_train,
+                    name='res20',
+                    summary_collection=self.summary_collection)
+                resnet = customlayers.resnet_block(
+                    resnet,
+                    channels=[
+                        256,
+                        256],
+                    pool_dim=None,
+                    is_train=self.is_train,
+                    name='res21',
+                    summary_collection=self.summary_collection)
+                resnet = customlayers.resnet_block(
+                    resnet,
+                    channels=[
+                        256,
+                        256],
+                    pool_dim=None,
+                    is_train=self.is_train,
+                    name='res22',
+                    summary_collection=self.summary_collection)
+                resnet = customlayers.resnet_block(
+                    resnet,
+                    channels=[
+                        256,
+                        256],
+                    pool_dim=None,
+                    is_train=self.is_train,
+                    name='res23',
+                    summary_collection=self.summary_collection)
+                resnet = customlayers.resnet_block(
+                    resnet,
+                    channels=[
+                        256,
+                        256],
+                    pool_dim=None,
+                    is_train=self.is_train,
+                    name='res24',
+                    summary_collection=self.summary_collection)
+                resnet = customlayers.resnet_block(
+                    resnet,
+                    channels=[
+                        256,
+                        256],
+                    pool_dim=None,
+                    is_train=self.is_train,
+                    name='res25',
+                    summary_collection=self.summary_collection)
+                resnet = customlayers.resnet_block(
+                    resnet,
+                    channels=[
+                        256,
+                        256],
+                    pool_dim=None,
+                    is_train=self.is_train,
+                    name='res26',
+                    summary_collection=self.summary_collection)
+                resnet = customlayers.resnet_block(
+                    resnet,
+                    channels=[
+                        256,
+                        256],
+                    pool_dim=None,
+                    is_train=self.is_train,
+                    name='res27',
+                    summary_collection=self.summary_collection)
+                resnet = customlayers.resnet_block(
+                    resnet,
+                    channels=[
+                        256,
+                        512],
+                    pool_dim=None,
+                    is_train=self.is_train,
+                    name='res28',
+                    summary_collection=self.summary_collection)
+                encoder = customlayers.resnet_block(
+                    resnet,
+                    channels=[
+                        512,
+                        512],
+                    pool_dim=2,
+                    is_train=self.is_train,
+                    name='res29',
+                    summary_collection=self.summary_collection)
+                self.encoder = encoder  # store the encoder in an attribute for easy access
+                print(('Final shape: ' + str(encoder.outputs.get_shape().as_list())))
 
 
-########################################################################################################################
+##########################################################################
 #                                                   Classifier                                                         #
-########################################################################################################################
+##########################################################################
             print('[*] CLASSIFIER')
             with tf.variable_scope('classifier') as vs:
                 with tf.variable_scope('out1x1_1') as vs:
-                    classifier1 = tl.layers.Conv1dLayer(encoder,
-                                                act=customlayers.prelu,
-                                                        shape=[1, 512, self._opts._nclasses],
-                                                stride=1,
-                                                padding='SAME',
-                                                W_init=tf.truncated_normal_initializer(stddev=5e-2),
-                                                W_init_args={},
-                                                b_init=tf.constant_initializer(value=0.1),
-                                                b_init_args={},
-                                                name='1x1_layer')
-                    classifier1.outputs = tf.reshape(classifier1.outputs,
-                                                     [self._opts._batchsize, self._opts._nclasses])
+                    classifier1 = tl.layers.Conv1dLayer(
+                        encoder,
+                        act=customlayers.prelu,
+                        shape=[
+                            1,
+                            512,
+                            self._opts._nclasses],
+                        stride=1,
+                        padding='SAME',
+                        W_init=tf.truncated_normal_initializer(
+                            stddev=5e-2),
+                        W_init_args={},
+                        b_init=tf.constant_initializer(
+                            value=0.1),
+                        b_init_args={},
+                        name='1x1_layer')
+                    classifier1.outputs = tf.reshape(
+                        classifier1.outputs, [
+                            self._opts._batchsize, self._opts._nclasses])
 
                 with tf.variable_scope('out1x1_2') as vs:
-                    classifier2 = tl.layers.Conv1dLayer(encoder,
-                                                act=customlayers.prelu,
-                                                shape=[1, 512, self._opts._nclasses],
-                                                stride=1,
-                                                padding='SAME',
-                                                W_init=tf.truncated_normal_initializer(stddev=5e-2),
-                                                W_init_args={},
-                                                b_init=tf.constant_initializer(value=0.1),
-                                                b_init_args={},
-                                                name='1x1_layer')
-                    classifier2.outputs = tf.reshape(classifier2.outputs,
-                                                     [self._opts._batchsize, self._opts._nclasses])
+                    classifier2 = tl.layers.Conv1dLayer(
+                        encoder,
+                        act=customlayers.prelu,
+                        shape=[
+                            1,
+                            512,
+                            self._opts._nclasses],
+                        stride=1,
+                        padding='SAME',
+                        W_init=tf.truncated_normal_initializer(
+                            stddev=5e-2),
+                        W_init_args={},
+                        b_init=tf.constant_initializer(
+                            value=0.1),
+                        b_init_args={},
+                        name='1x1_layer')
+                    classifier2.outputs = tf.reshape(
+                        classifier2.outputs, [
+                            self._opts._batchsize, self._opts._nclasses])
 
                     # this output is of shape [batch, 1, classes]
                 with tf.variable_scope('outlayer_concat') as vs:
-                    classifier = customlayers.StackLayer([classifier1, classifier2], axis=-1) # along the channels
-########################################################################################################################
+                    classifier = customlayers.StackLayer(
+                        [classifier1, classifier2], axis=-1)  # along the channels
+##########################################################################
 #                                       Garbage Detector (Currently out of use.)                                       #
-########################################################################################################################
+##########################################################################
             print('[*] GARBAGE_DETECTOR')
             with tf.variable_scope('garbage_detec') as vs:
                 flat = tl.layers.FlattenLayer(encoder, name='flatten')
                 garbage_detector = tl.layers.DenseLayer(flat,
-                                                n_units=64,
-                                                act=customlayers.prelu,
-                                                name='fc')
+                                                        n_units=64,
+                                                        act=customlayers.prelu,
+                                                        name='fc')
                 dropout = tl.layers.DropoutLayer(garbage_detector,
-                                                keep=0.5,
-                                                is_train=self.is_train,
-                                                is_fix=True,
-                                                name='dropout')
+                                                 keep=0.5,
+                                                 is_train=self.is_train,
+                                                 is_fix=True,
+                                                 name='dropout')
 
             with tf.variable_scope('garbage_detec2') as vs:
                 garbage_detector = tl.layers.DenseLayer(dropout,
-                                                n_units=2,
-                                                act=customlayers.prelu,
-                                                name='fc')
+                                                        n_units=2,
+                                                        act=customlayers.prelu,
+                                                        name='fc')
 
             if valid_mode:
-                classifier.outputs = tf.Print(classifier.outputs, [classifier.outputs.get_shape(),
-                                                               classifier.outputs, classifier.outputs],
-                                              message='outVALID') if self._opts._debug else classifier.outputs
+                classifier.outputs = tf.Print(
+                    classifier.outputs,
+                    [
+                        classifier.outputs.get_shape(),
+                        classifier.outputs,
+                        classifier.outputs],
+                    message='outVALID') if self._opts._debug else classifier.outputs
                 return classifier, garbage_detector
             else:
-                classifier.outputs = tf.Print(classifier.outputs, [classifier.outputs.get_shape(),
-                                                               classifier.outputs, classifier.outputs],
-                                              message='out') if self._opts._debug else classifier.outputs
+                classifier.outputs = tf.Print(
+                    classifier.outputs,
+                    [
+                        classifier.outputs.get_shape(),
+                        classifier.outputs,
+                        classifier.outputs],
+                    message='out') if self._opts._debug else classifier.outputs
                 return classifier, garbage_detector
 
     def get_loss(self, raw_logits, labels, valid_mode=False):
@@ -668,27 +954,34 @@ class DeeProtein():
             name_suffix = '_valid'
         with tf.variable_scope('loss%s' % name_suffix) as vs:
 
-            # take an argmax to get the channel with the larget activations in each position:
+            # take an argmax to get the channel with the larget activations in
+            # each position:
             with tf.variable_scope('raw_logits') as vs:
                 if not valid_mode:
-                    single_raw_logits = tf.reduce_max(raw_logits, axis=-1, keep_dims=False)
+                    single_raw_logits = tf.reduce_max(
+                        raw_logits, axis=-1, keep_dims=False)
                 else:
                     # take the mean in valid
-                    single_raw_logits = tf.reduce_mean(raw_logits, axis=-1, keep_dims=False)
+                    single_raw_logits = tf.reduce_mean(
+                        raw_logits, axis=-1, keep_dims=False)
 
             # first get the logits from the outlayer
             sigmoid_logits = tf.nn.sigmoid(single_raw_logits, name='logits')
 
-
             # positives
-            positive_predictions = tf.cast(tf.greater(sigmoid_logits, 0.5), dtype=tf.float32)
-            true_positive_predictions = tf.multiply(positive_predictions, labels)
+            positive_predictions = tf.cast(tf.greater(
+                sigmoid_logits, 0.5), dtype=tf.float32)
+            true_positive_predictions = tf.multiply(
+                positive_predictions, labels)
             # negatives
-            negative_predictions = tf.cast(tf.less(sigmoid_logits, 0.5), dtype=tf.float32)
+            negative_predictions = tf.cast(
+                tf.less(sigmoid_logits, 0.5), dtype=tf.float32)
             negative_labels = tf.cast(tf.equal(labels, 0), dtype=tf.float32)
-            true_negative_predictions = tf.multiply(negative_predictions, negative_labels)
+            true_negative_predictions = tf.multiply(
+                negative_predictions, negative_labels)
             false_negative_predictions = tf.multiply(negative_labels, labels)
-            false_positive_predictions = tf.multiply(positive_predictions, negative_labels)
+            false_positive_predictions = tf.multiply(
+                positive_predictions, negative_labels)
             # stats
             nr_pred_positives = tf.reduce_sum(positive_predictions)
             nr_true_positives = tf.reduce_sum(true_positive_predictions)
@@ -701,64 +994,93 @@ class DeeProtein():
             tnr = tf.divide(nr_true_negatives, tf.reduce_sum(negative_labels))
 
             # accuracy
-            f1_score = tf.divide(nr_true_positives*2,
-                                 tf.add(tf.add(2*nr_true_positives, nr_false_negatives), nr_false_positives))
+            f1_score = tf.divide(
+                nr_true_positives * 2,
+                tf.add(
+                    tf.add(
+                        2 * nr_true_positives,
+                        nr_false_negatives),
+                    nr_false_positives))
 
             tf.summary.scalar('TPR', tpr, collections=self.summary_collection)
             tf.summary.scalar('FPR', fpr, collections=self.summary_collection)
             tf.summary.scalar('FDR', fdr, collections=self.summary_collection)
             tf.summary.scalar('TNR', tnr, collections=self.summary_collection)
-            tf.summary.scalar('F1', f1_score, collections=self.summary_collection)
-            tf.summary.scalar('avg_pred_positives', tf.divide(nr_pred_positives, self._opts._batchsize),
-                              collections=self.summary_collection)
-            tf.summary.scalar('avg_true_positives', tf.divide(nr_true_positives, self._opts._batchsize),
-                              collections=self.summary_collection)
+            tf.summary.scalar(
+                'F1', f1_score, collections=self.summary_collection)
+            tf.summary.scalar(
+                'avg_pred_positives',
+                tf.divide(
+                    nr_pred_positives,
+                    self._opts._batchsize),
+                collections=self.summary_collection)
+            tf.summary.scalar(
+                'avg_true_positives',
+                tf.divide(
+                    nr_true_positives,
+                    self._opts._batchsize),
+                collections=self.summary_collection)
 
             # get the FALSE POSITIVE LOSS:
             fp_loss = tf.divide(nr_false_positives, self._opts._batchsize)
-            tf.summary.scalar('fp_loss', fp_loss, collections=self.summary_collection)
+            tf.summary.scalar(
+                'fp_loss',
+                fp_loss,
+                collections=self.summary_collection)
             # get the TRUE POSITIVE LOSS
             tp_loss = tf.subtract(1.0, tpr)
 
-            #get the balanced cross entropy:
+            # get the balanced cross entropy:
             # class_sizes = np.asfarray(
             #     [self.batchgen.class_dict[key]['size'] if self.batchgen.class_dict[key]['size'] <= 1000 else 1000
             #      for key in self.batchgen.class_dict.keys()])
-            class_sizes = np.asfarray(
-                [self.batchgen.class_dict[key]['size'] for key in self.batchgen.class_dict.keys()])
+            class_sizes = np.asfarray([self.batchgen.class_dict[key]['size'] for key in list(
+                self.batchgen.class_dict.keys())])
             mean_class_size = np.mean(class_sizes)
             self.pos_weight = mean_class_size / class_sizes
-            # config.maxClassInbalance prevents too large effective learning rates (i.e. too large gradients)
+            # config.maxClassInbalance prevents too large effective learning
+            # rates (i.e. too large gradients)
             assert self._opts._maxclassinbalance >= 1.0
 
-            self.pos_weight = np.maximum(1.0, np.minimum(self._opts._maxclassinbalance, self.pos_weight))
+            self.pos_weight = np.maximum(1.0, np.minimum(
+                self._opts._maxclassinbalance, self.pos_weight))
             self.pos_weight = self.pos_weight.astype(np.float32)
             self.log_file.write("[*] Initialized loss with posweights: \n")
             self.log_file.write(str(self.pos_weight))
 
             # tile the pos weigths:
-            pos_weights = tf.reshape(tf.tile(self.pos_weight, multiples=[self._opts._batchsize]),
-                                     [self._opts._batchsize, self._opts._nclasses])
-            assert pos_weights.get_shape().as_list() == [self._opts._batchsize, self._opts._nclasses]
+            pos_weights = tf.reshape(
+                tf.tile(
+                    self.pos_weight, multiples=[
+                        self._opts._batchsize]), [
+                    self._opts._batchsize, self._opts._nclasses])
+            assert pos_weights.get_shape().as_list() == [
+                self._opts._batchsize, self._opts._nclasses]
 
             # get the FOCAL LOSS
-            focal_loss = customlayers.focal_lossIII(prediction_tensor=single_raw_logits, target_tensor=labels,
-                                                    weights=self.pos_weight,
-                                                    gamma=2., epsilon=0.00001)
+            focal_loss = customlayers.focal_lossIII(
+                prediction_tensor=single_raw_logits,
+                target_tensor=labels,
+                weights=self.pos_weight,
+                gamma=2.,
+                epsilon=0.00001)
             fl_sum = tf.reduce_sum(focal_loss, name='focal_loss_sum')
             fl_mean = tf.reduce_mean(focal_loss, name='focal_loss_mean')
 
-            ce_loss = tf.nn.weighted_cross_entropy_with_logits(logits=single_raw_logits, targets=labels,
-                                                               pos_weight=self.pos_weight)
+            ce_loss = tf.nn.weighted_cross_entropy_with_logits(
+                logits=single_raw_logits, targets=labels, pos_weight=self.pos_weight)
             ce_mean = tf.reduce_mean(ce_loss, name='celoss_mean')
 
-            #get the l2 loss on weigths of conv layers and dense layers
+            # get the l2 loss on weigths of conv layers and dense layers
             l2_loss = 0
-            for w in tl.layers.get_variables_with_name('W_conv1d', train_only=True, printable=False):
+            for w in tl.layers.get_variables_with_name(
+                    'W_conv1d', train_only=True, printable=False):
                 l2_loss += tf.contrib.layers.l2_regularizer(1e-4)(w)
-            for w in tl.layers.get_variables_with_name('W_conv2d', train_only=True, printable=False):
+            for w in tl.layers.get_variables_with_name(
+                    'W_conv2d', train_only=True, printable=False):
                 l2_loss += tf.contrib.layers.l2_regularizer(1e-4)(w)
-            for w in tl.layers.get_variables_with_name('W', train_only=True, printable=False):
+            for w in tl.layers.get_variables_with_name(
+                    'W', train_only=True, printable=False):
                 l2_loss += tf.contrib.layers.l2_regularizer(1e-4)(w)
 
             """
@@ -766,12 +1088,30 @@ class DeeProtein():
             """
             loss = fl_mean + l2_loss
 
-            tf.summary.scalar('loss_total', loss, collections=self.summary_collection)
-            tf.summary.scalar('loss_l2', l2_loss, collections=self.summary_collection)
-            tf.summary.scalar('loss_1-tp', tp_loss, collections=self.summary_collection)
-            tf.summary.scalar('loss_focal_mean', fl_mean, collections=self.summary_collection)
-            tf.summary.scalar('loss_focal_sum', fl_sum, collections=self.summary_collection)
-            tf.summary.scalar('loss_CE', ce_mean, collections=self.summary_collection)
+            tf.summary.scalar(
+                'loss_total',
+                loss,
+                collections=self.summary_collection)
+            tf.summary.scalar(
+                'loss_l2',
+                l2_loss,
+                collections=self.summary_collection)
+            tf.summary.scalar(
+                'loss_1-tp',
+                tp_loss,
+                collections=self.summary_collection)
+            tf.summary.scalar(
+                'loss_focal_mean',
+                fl_mean,
+                collections=self.summary_collection)
+            tf.summary.scalar(
+                'loss_focal_sum',
+                fl_sum,
+                collections=self.summary_collection)
+            tf.summary.scalar(
+                'loss_CE',
+                ce_mean,
+                collections=self.summary_collection)
 
             return loss, f1_score
 
@@ -788,23 +1128,39 @@ class DeeProtein():
         """
         if adam:
             if vars:
-                opt = tf.train.AdamOptimizer(learning_rate=self._opts._learningrate,
-                                             beta1=0.9, beta2=0.999,
-                                             epsilon=self._opts._epsilon,
-                                             use_locking=False, name='Adam').minimize(loss, var_list=vars)
+                opt = tf.train.AdamOptimizer(
+                    learning_rate=self._opts._learningrate,
+                    beta1=0.9,
+                    beta2=0.999,
+                    epsilon=self._opts._epsilon,
+                    use_locking=False,
+                    name='Adam').minimize(
+                    loss,
+                    var_list=vars)
 
             else:
-                opt = tf.train.AdamOptimizer(learning_rate=self._opts._learningrate, beta1=0.9, beta2=0.999,
-                                             epsilon=self._opts._epsilon, use_locking=False, name='Adam').minimize(loss)
+                opt = tf.train.AdamOptimizer(
+                    learning_rate=self._opts._learningrate,
+                    beta1=0.9,
+                    beta2=0.999,
+                    epsilon=self._opts._epsilon,
+                    use_locking=False,
+                    name='Adam').minimize(loss)
         else:
             if vars:
-                opt = tf.train.AdagradOptimizer(learning_rate=self._opts._learningrate,
-                                                initial_accumulator_value=0.1,
-                                                use_locking=False, name='Adagrad').minimize(loss, var_list=vars)
+                opt = tf.train.AdagradOptimizer(
+                    learning_rate=self._opts._learningrate,
+                    initial_accumulator_value=0.1,
+                    use_locking=False,
+                    name='Adagrad').minimize(
+                    loss,
+                    var_list=vars)
             else:
-                opt = tf.train.AdagradOptimizer(learning_rate=self._opts._learningrate,
-                                                initial_accumulator_value=0.1,
-                                                use_locking=False, name='Adagrad').minimize(loss)
+                opt = tf.train.AdagradOptimizer(
+                    learning_rate=self._opts._learningrate,
+                    initial_accumulator_value=0.1,
+                    use_locking=False,
+                    name='Adagrad').minimize(loss)
         return opt
 
     def feed_dict(self):
@@ -832,7 +1188,9 @@ class DeeProtein():
         # open a session:
         self.session = tf.Session(config=config)
 
-        self.log_file.write('Initialized Batch_Generator with MODE: %s\n' % self._opts._batchgenmode)
+        self.log_file.write(
+            'Initialized Batch_Generator with MODE: %s\n' %
+            self._opts._batchgenmode)
         self.batchgen = helpers.BatchGenerator(self._opts)
 
         self.log_file.write('Initialized ROC_tracker\n')
@@ -853,21 +1211,22 @@ class DeeProtein():
             self.initialize_helpers()
 
             # define the filenames for validation and training:
-            train_filenames = glob.glob(os.path.join(self._opts._batchesdir,
-                                                     '*train_batch_%s_*' % str(self._opts._windowlength)))
+            train_filenames = glob.glob(os.path.join(
+                self._opts._batchesdir, '*train_batch_%s_*' % str(self._opts._windowlength)))
             if self._opts._gpu == 'True':
                 device = '/gpu:0'
             else:
                 device = '/cpu:0'
             with tf.device(device):
                 # graph for training:
-                train_batch, train_labels, _, _ = self.input_pipeline(train_filenames, valid_mode=False)
+                train_batch, train_labels, _, _ = self.input_pipeline(
+                    train_filenames, valid_mode=False)
                 classifier, _ = self.model(train_batch, valid_mode=False)
 
                 train_raw_logits = classifier.outputs
 
-                train_loss, train_acc = self.get_loss(raw_logits=train_raw_logits, labels=train_labels,
-                                                      valid_mode=False)
+                train_loss, train_acc = self.get_loss(
+                    raw_logits=train_raw_logits, labels=train_labels, valid_mode=False)
 
                 opt = self.get_opt(train_loss, vars=[])
 
@@ -877,27 +1236,34 @@ class DeeProtein():
                 # restore the model for training
                 if self._opts._restore:
                     if restore_whole:
-                        classifier = self.load_model_weights(classifier, session=self.session,
-                                                                name='Classifier') #THIS RUNS THE SESSION INTERNALLY
+                        classifier = self.load_model_weights(
+                            classifier,
+                            session=self.session,
+                            name='Classifier')  # THIS RUNS THE SESSION INTERNALLY
                     else:
-                        classifier = self.load_conv_weights_npz(classifier, session=self.session,
-                                                            name='Classifier') #THIS RUNS THE SESSION INTERNALLY
+                        classifier = self.load_conv_weights_npz(
+                            classifier,
+                            session=self.session,
+                            name='Classifier')  # THIS RUNS THE SESSION INTERNALLY
 
                 train_summaries = tf.summary.merge_all(key='train')
 
             self.saver = tf.train.Saver()
 
-            #get time and stats_collector
+            # get time and stats_collector
             start_time = time.time()
             stats_collector = []
 
             # get the queue
             coord = tf.train.Coordinator()
-            threads = tf.train.start_queue_runners(coord=coord, sess=self.session)
+            threads = tf.train.start_queue_runners(
+                coord=coord, sess=self.session)
 
             # get log file and writers:
-            self.train_writer = tf.summary.FileWriter(self._opts._summariesdir + '/train', self.session.graph)
-            self.eval_writer = tf.summary.FileWriter(self._opts._summariesdir + '/valid')
+            self.train_writer = tf.summary.FileWriter(
+                self._opts._summariesdir + '/train', self.session.graph)
+            self.eval_writer = tf.summary.FileWriter(
+                self._opts._summariesdir + '/valid')
 
             self.log_file.write('Starting TRAINING...\n')
 
@@ -919,19 +1285,25 @@ class DeeProtein():
                     av_accuracy = sum(accuracies) / len(accuracies)
                     stats_collector = []
 
-                    self.log_file.write('Step %d: Av.loss = %.2f (%.3f sec)\n' % (step, av_loss,
-                                                                                  time.time() - start_time))
-                    self.log_file.write('Step %d: Av.accuracy = %.2f (%.3f sec)\n' % (step, av_accuracy,
-                                                                                      time.time() - start_time))
+                    self.log_file.write(
+                        'Step %d: Av.loss = %.2f (%.3f sec)\n' %
+                        (step, av_loss, time.time() - start_time))
+                    self.log_file.write(
+                        'Step %d: Av.accuracy = %.2f (%.3f sec)\n' %
+                        (step, av_accuracy, time.time() - start_time))
                     self.log_file.flush()
 
                 if step % 2000 == 0:
                     # save the model in nais model snapshots like in model book
-                    self.save_model(classifier, self.session, step=step, name='Classifier')
+                    self.save_model(
+                        classifier,
+                        self.session,
+                        step=step,
+                        name='Classifier')
                     self.eval_while_train(step, 2000)
                 else:
-                    _, loss, acc, labels = self.session.run([opt, train_loss, train_acc, train_labels],
-                                                            feed_dict=self.feed_dict())
+                    _, loss, acc, labels = self.session.run(
+                        [opt, train_loss, train_acc, train_labels], feed_dict=self.feed_dict())
                     stats_collector.append((loss, acc))
 
             # gracefully shut down the queue
@@ -946,8 +1318,8 @@ class DeeProtein():
         eval_graph = tf.Graph()
         self.is_train = False
 
-        valid_filenames = glob.glob(os.path.join(self._opts._batchesdir,
-                                                 '*valid_batch_%s_*' % str(self._opts._windowlength)))
+        valid_filenames = glob.glob(os.path.join(
+            self._opts._batchesdir, '*valid_batch_%s_*' % str(self._opts._windowlength)))
 
         # get a graph
         if self._opts._allowsoftplacement == 'True':
@@ -955,7 +1327,7 @@ class DeeProtein():
         else:
             config = tf.ConfigProto(allow_soft_placement=False)
         # allow growth to survey the consumed GPU memory
-        config.gpu_options.allow_growth=True
+        config.gpu_options.allow_growth = True
         with eval_graph.as_default():
 
             self.initialize_helpers()
@@ -968,36 +1340,43 @@ class DeeProtein():
                     if self.valid_graph_initialized:
                         tl.layers.set_name_reuse(enable=True)
                     # graph for evaluation:
-                    valid_batch, valid_labels, _, _ = self.input_pipeline(valid_filenames, valid_mode=True)
-                    infer_classifier, _ = self.model(valid_batch, valid_mode=True)
+                    valid_batch, valid_labels, _, _ = self.input_pipeline(
+                        valid_filenames, valid_mode=True)
+                    infer_classifier, _ = self.model(
+                        valid_batch, valid_mode=True)
 
                     labelss = tf.argmax(valid_labels, axis=1)
-                    assert labelss.get_shape().as_list() == [self._opts._batchsize]
-
+                    assert labelss.get_shape().as_list() == [
+                        self._opts._batchsize]
 
                     valid_raw_logits = infer_classifier.outputs
 
-                    valid_sigmoid_logits = tf.sigmoid(valid_raw_logits, name='Sigmoid_logits')
+                    valid_sigmoid_logits = tf.sigmoid(
+                        valid_raw_logits, name='Sigmoid_logits')
                     # reduce mean:
-                    valid_sigmoid_logits = tf.reduce_mean(valid_sigmoid_logits, axis=-1, keep_dims=False)
+                    valid_sigmoid_logits = tf.reduce_mean(
+                        valid_sigmoid_logits, axis=-1, keep_dims=False)
 
+                    valid_loss, valid_acc = self.get_loss(
+                        raw_logits=valid_raw_logits, labels=valid_labels, valid_mode=True)
 
-                    valid_loss, valid_acc = self.get_loss(raw_logits=valid_raw_logits, labels=valid_labels,
-                                                          valid_mode=True)
-
-                    self.eval_writer = tf.summary.FileWriter(self._opts._summariesdir + '/valid')
+                    self.eval_writer = tf.summary.FileWriter(
+                        self._opts._summariesdir + '/valid')
 
                     self.session.run(tf.global_variables_initializer())
                     self.session.run(tf.local_variables_initializer())
 
                     # restore the model weights
-                    infer_classifier = self.load_model_weights(infer_classifier, session=self.session,
-                                                         name='Classifier') #THIS RUNS THE SESSION INTERNALLY
+                    infer_classifier = self.load_model_weights(
+                        infer_classifier,
+                        session=self.session,
+                        name='Classifier')  # THIS RUNS THE SESSION INTERNALLY
 
                     valid_summaries = tf.summary.merge_all(key='valid')
 
                     eval_coord = tf.train.Coordinator()
-                    eval_threads = tf.train.start_queue_runners(coord=eval_coord, sess=self.session)
+                    eval_threads = tf.train.start_queue_runners(
+                        coord=eval_coord, sess=self.session)
 
                     average_acc = []
 
@@ -1010,26 +1389,29 @@ class DeeProtein():
                                 break
 
                             summary, loss, outlayer, \
-                            acc, labels, sigmoid_logits, _ = self.session.run([valid_summaries,
-                                                                       valid_loss,
-                                                                       valid_raw_logits,
-                                                                       valid_acc,
-                                                                       valid_labels,
-                                                                       valid_sigmoid_logits,
-                                                                       labelss
-                                                                       ],
-                                                                      feed_dict=self.feed_dict()
-                                                                      )
+                                acc, labels, sigmoid_logits, _ = self.session.run([valid_summaries,
+                                                                                   valid_loss,
+                                                                                   valid_raw_logits,
+                                                                                   valid_acc,
+                                                                                   valid_labels,
+                                                                                   valid_sigmoid_logits,
+                                                                                   labelss
+                                                                                   ],
+                                                                                  feed_dict=self.feed_dict()
+                                                                                  )
                             # pass the predictions to the ROC tracker:
-                            self.ROCtracker.update(sigmoid_logits=sigmoid_logits, true_labels=labels)
+                            self.ROCtracker.update(
+                                sigmoid_logits=sigmoid_logits, true_labels=labels)
                             self.eval_writer.add_summary(summary, step)
 
                             average_acc.append(acc)
 
                     except tf.errors.OutOfRangeError:
-                        average_acc = sum(average_acc)/len(average_acc)
-                        self.log_file.write('[*] Finished validation'
-                                            ' with av.acc of %s' % str(average_acc))
+                        average_acc = sum(average_acc) / len(average_acc)
+                        self.log_file.write(
+                            '[*] Finished validation'
+                            ' with av.acc of %s' %
+                            str(average_acc))
                         self.log_file.flush()
                     finally:
                         # when done ask the threads to stop
@@ -1061,9 +1443,9 @@ class DeeProtein():
         eval_graph = tf.Graph()
         self.is_train = False
 
-        valid_filenames = glob.glob(os.path.join(self._opts._batchesdir,
-                                                 '*valid_batch_%s_*' % str(self._opts._windowlength)))
-        print('Found %d validation files.' % len(valid_filenames))
+        valid_filenames = glob.glob(os.path.join(
+            self._opts._batchesdir, '*valid_batch_%s_*' % str(self._opts._windowlength)))
+        print(('Found %d validation files.' % len(valid_filenames)))
 
         # get a new session:
         if self._opts._allowsoftplacement == 'True':
@@ -1071,7 +1453,7 @@ class DeeProtein():
         else:
             config = tf.ConfigProto(allow_soft_placement=False)
         # allow growth to survey the consumed GPU memory
-        config.gpu_options.allow_growth=True
+        config.gpu_options.allow_growth = True
         with eval_graph.as_default():
             if self._opts._gpu == 'True':
                 device = '/gpu:0'
@@ -1082,33 +1464,38 @@ class DeeProtein():
                     if self.valid_graph_initialized:
                         tl.layers.set_name_reuse(enable=True)
                     # graph for evaluation:
-                    valid_batch, valid_labels, _, _ = self.input_pipeline(valid_filenames, valid_mode=True)
-                    infer_classifier, _ = self.model(valid_batch, valid_mode=True)
+                    valid_batch, valid_labels, _, _ = self.input_pipeline(
+                        valid_filenames, valid_mode=True)
+                    infer_classifier, _ = self.model(
+                        valid_batch, valid_mode=True)
 
                     labelss = tf.argmax(valid_labels, axis=1)
-                    assert labelss.get_shape().as_list() == [self._opts._batchsize]
-
+                    assert labelss.get_shape().as_list() == [
+                        self._opts._batchsize]
 
                     valid_raw_logits = infer_classifier.outputs
 
-                    valid_sigmoid_logits = tf.sigmoid(valid_raw_logits, name='Sigmoid_logits')
+                    valid_sigmoid_logits = tf.sigmoid(
+                        valid_raw_logits, name='Sigmoid_logits')
                     # reduce mean:
-                    valid_sigmoid_logits = tf.reduce_mean(valid_sigmoid_logits, axis=-1, keep_dims=False)
+                    valid_sigmoid_logits = tf.reduce_mean(
+                        valid_sigmoid_logits, axis=-1, keep_dims=False)
 
-
-                    valid_loss, valid_acc = self.get_loss(raw_logits=valid_raw_logits, labels=valid_labels,
-                                                          valid_mode=True)
+                    valid_loss, valid_acc = self.get_loss(
+                        raw_logits=valid_raw_logits, labels=valid_labels, valid_mode=True)
 
                     sess.run(tf.global_variables_initializer())
                     sess.run(tf.local_variables_initializer())
 
                     # restore the model weights
-                    self.load_complete_model_eval(infer_classifier, sess, name='Classifier')
+                    self.load_complete_model_eval(
+                        infer_classifier, sess, name='Classifier')
 
                     valid_summaries = tf.summary.merge_all(key='valid')
 
                     eval_coord = tf.train.Coordinator()
-                    eval_threads = tf.train.start_queue_runners(coord=eval_coord, sess=sess)
+                    eval_threads = tf.train.start_queue_runners(
+                        coord=eval_coord, sess=sess)
 
                     average_acc = []
 
@@ -1121,27 +1508,30 @@ class DeeProtein():
                                 break
 
                             summary, loss, outlayer, \
-                            acc, labels, sigmoid_logits, _ = sess.run([valid_summaries,
-                                                                    valid_loss,
-                                                                    valid_raw_logits,
-                                                                    valid_acc,
-                                                                    valid_labels,
-                                                                    valid_sigmoid_logits,
-                                                                    labelss
-                                                                    ],
-                                                                   feed_dict=self.feed_dict()
-                                                                   )
+                                acc, labels, sigmoid_logits, _ = sess.run([valid_summaries,
+                                                                           valid_loss,
+                                                                           valid_raw_logits,
+                                                                           valid_acc,
+                                                                           valid_labels,
+                                                                           valid_sigmoid_logits,
+                                                                           labelss
+                                                                           ],
+                                                                          feed_dict=self.feed_dict()
+                                                                          )
                             self.eval_writer.add_summary(summary, step)
 
                             # pass the predictions to the ROC tracker:
-                            self.ROCtracker.update(sigmoid_logits=sigmoid_logits, true_labels=labels)
+                            self.ROCtracker.update(
+                                sigmoid_logits=sigmoid_logits, true_labels=labels)
 
                             average_acc.append(acc)
 
                     except tf.errors.OutOfRangeError:
-                        average_acc = sum(average_acc)/len(average_acc)
-                        self.log_file.write('[*] Finished validation after %s steps'
-                                            ' with av.acc of %s' % (str(step), str(average_acc)))
+                        average_acc = sum(average_acc) / len(average_acc)
+                        self.log_file.write(
+                            '[*] Finished validation after %s steps'
+                            ' with av.acc of %s' %
+                            (str(step), str(average_acc)))
                         self.log_file.flush()
                     finally:
                         # when done ask the threads to stop
@@ -1171,52 +1561,72 @@ class DeeProtein():
           reduce_dims: A `bool` defining wheter to reduce the dimensions via PCA prior to dumping the embedding.
         """
         # get an embedding dir:
-        embedding_dir = os.path.join(self._opts._restorepath, 'embedding%d' % embedding_dims)
+        embedding_dir = os.path.join(
+            self._opts._restorepath,
+            'embedding%d' %
+            embedding_dims)
         if not os.path.exists(embedding_dir):
             os.makedirs(embedding_dir)
 
         with tf.Graph().as_default():
             # we build the graph for inference, without loss ops and optimizers
             self.is_train = False
-            self._opts._batchsize = 50 # TODO edit this here
+            self._opts._batchsize = 50  # TODO edit this here
             self.initialize_helpers()
 
             # get the line nr of the valid_data,
-            # add the batch percentage and determine the number of batches in an epoch
+            # add the batch percentage and determine the number of batches in
+            # an epoch
 
-            input_seq_node = tf.placeholder(dtype=tf.float32,
-                                            shape=[self._opts._batchsize,
-                                                   self._opts._depth, self._opts._windowlength, 1])
+            input_seq_node = tf.placeholder(
+                dtype=tf.float32,
+                shape=[
+                    self._opts._batchsize,
+                    self._opts._depth,
+                    self._opts._windowlength,
+                    1])
 
             inference_net, _ = self.model(input_seq_node, valid_mode=False)
 
             # load the pretrained model
             self.session.run(tf.global_variables_initializer())
-            self.load_model_weights(inference_net, session=self.session, name='Classifier')
+            self.load_model_weights(
+                inference_net,
+                session=self.session,
+                name='Classifier')
 
-            # initialize the embedding with UNK token, the dict is updated automatically for UNK
+            # initialize the embedding with UNK token, the dict is updated
+            # automatically for UNK
             self.embedding = np.zeros([1, 512])
 
-            for i in range(self.batchgen.eval_batch_nr): # this is calculated when we initialize batchgen
+            for i in range(
+                    self.batchgen.eval_batch_nr):  # this is calculated when we initialize batchgen
 
-                batch = self.batchgen.generate_valid_batch(include_garbage=False)
+                batch = self.batchgen.generate_valid_batch(
+                    include_garbage=False)
                 # run the session and retrieve the embedded_batch
-                embed_batch = self.session.run(self.encoder.outputs, feed_dict={input_seq_node: batch})
+                embed_batch = self.session.run(
+                    self.encoder.outputs, feed_dict={
+                        input_seq_node: batch})
 
                 # reshape to 2D:
-                embed_batch = np.reshape(embed_batch, [self._opts._batchsize, embed_batch.shape[-1]])
+                embed_batch = np.reshape(
+                    embed_batch, [self._opts._batchsize, embed_batch.shape[-1]])
 
-                print(embed_batch.shape)
+                print((embed_batch.shape))
 
                 # Add the batch to the complete embedding:
-                self.embedding = np.concatenate([self.embedding, embed_batch], axis=0)
+                self.embedding = np.concatenate(
+                    [self.embedding, embed_batch], axis=0)
 
             # get the total number of sequeces we embedded:
             embedded_seqs = self.embedding.shape[0]
-            original_features = self.embedding.shape[1] # TODO we don't really need this
+            # TODO we don't really need this
+            original_features = self.embedding.shape[1]
 
         if reduce_dims:
-            # now perform a dimensionality reduction (PCA) to get the n most important features:
+            # now perform a dimensionality reduction (PCA) to get the n most
+            # important features:
             pca = decomposition.PCA(n_components=embedding_dims)
             pca.fit(self.embedding)
             fitted_embedding = pca.transform(self.embedding)
@@ -1230,26 +1640,32 @@ class DeeProtein():
         g = tf.Graph()
 
         with g.as_default():
-            # not get a different session and feed the damn np.Tensor into a nice tf.Tensor with tensorboard support.
+            # not get a different session and feed the damn np.Tensor into a
+            # nice tf.Tensor with tensorboard support.
             with tf.Session() as embedding_sess:
-                embedding_node = tf.placeholder(dtype=tf.float32, shape=[embedded_seqs,
-                                                                         embedding_dims])
+                embedding_node = tf.placeholder(
+                    dtype=tf.float32, shape=[
+                        embedded_seqs, embedding_dims])
 
                 # do the tensorboard stuff
                 # Do a mock op for the checkpoint:
-                embedding_Var = tf.get_variable('ProteinEmbedding', [embedded_seqs, embedding_dims])
+                embedding_Var = tf.get_variable(
+                    'ProteinEmbedding', [
+                        embedded_seqs, embedding_dims])
                 #embedding_Tensor = tf.multiply(embedding_node, mockop, name='ProteinEmbedding')
                 embedding_Var = tf.assign(embedding_Var, embedding_node)
 
                 # now do a mockOP:
-                mockOP = tf.multiply(embedding_Var, tf.ones([embedded_seqs, embedding_dims]))
+                mockOP = tf.multiply(embedding_Var, tf.ones(
+                    [embedded_seqs, embedding_dims]))
 
                 # do the damn ops for tensorboard:
                 config = projector.ProjectorConfig()
                 embedding = config.embeddings.add()
                 embedding.tensor_name = 'ProteinEmbedding'
                 # Link this tensor to its metadata file (e.g. labels).
-                embedding.metadata_path = os.path.join(embedding_dir, 'metadata.tsv')
+                embedding.metadata_path = os.path.join(
+                    embedding_dir, 'metadata.tsv')
 
                 summary_writer = tf.summary.FileWriter(embedding_dir)
                 projector.visualize_embeddings(summary_writer, config)
@@ -1259,10 +1675,16 @@ class DeeProtein():
                 saver = tf.train.Saver()
 
                 # run it:
-                _ = embedding_sess.run(mockOP,
-                                       feed_dict={embedding_node: fitted_embedding})
+                _ = embedding_sess.run(
+                    mockOP, feed_dict={
+                        embedding_node: fitted_embedding})
 
-                saver.save(embedding_sess, os.path.join(embedding_dir, "ProteinEmbedding.ckpt"), 1)
+                saver.save(
+                    embedding_sess,
+                    os.path.join(
+                        embedding_dir,
+                        "ProteinEmbedding.ckpt"),
+                    1)
 
             # now save the metadata as tsv:
 
@@ -1287,7 +1709,12 @@ class DeeProtein():
                             ec_map = ['no_EC_assigned']
                             EC.update(ec_map)
                     EC_list = list(EC)
-                    line = [','.join(self.batchgen.embedding_dict[key]['labels']), ','.join(EC_list), key, str(n)]
+                    line = [
+                        ','.join(
+                            self.batchgen.embedding_dict[key]['labels']),
+                        ','.join(EC_list),
+                        key,
+                        str(n)]
                     line = '\t'.join(line)
                     line += '\n'
                     out_fobj.write(line)

@@ -1,27 +1,32 @@
+import json
+import itertools
+import sys
+from scipy.special import expit
+import pickle
+from datetime import datetime
+import matplotlib.colors as mplcolors
+import matplotlib.font_manager as font_manager
+import matplotlib.pyplot as plt
+import pprint
 import numpy as np
 import random
 import os
 
-os.environ['MPLCONFIGDIR'] = "."  # set this to something reasonable not mounted
+# set this to something reasonable not mounted
+os.environ['MPLCONFIGDIR'] = "."
 # CAUTION: it is possible that this script caches a lot of data into this directory,
 # better not choose one mounted via network ;-)
 
 
-import pprint
-import matplotlib.pyplot as plt
-import matplotlib.font_manager as font_manager
-import matplotlib.colors as mplcolors
-from datetime import datetime
-import pickle
-from scipy.special import expit
-import sys
-import random
-import itertools
-import json
-
-plt.style.use(json.load(open('/net/data.isilon/igem/2017/scripts/clonedDeeProtein/DeeProtein/style.json', 'r')))
-font = font_manager.FontProperties(fname='/net/data.isilon/igem/2017/data/cache/fonts/JosefinSans-Regular.tff')
-monospaced = font_manager.FontProperties(fname='/net/data.isilon/igem/2017/data/cache/fonts/DroidSansMono-Regular.ttf')
+plt.style.use(
+    json.load(
+        open(
+            '/net/data.isilon/igem/2017/scripts/clonedDeeProtein/DeeProtein/style.json',
+            'r')))
+font = font_manager.FontProperties(
+    fname='/net/data.isilon/igem/2017/data/cache/fonts/JosefinSans-Regular.tff')
+monospaced = font_manager.FontProperties(
+    fname='/net/data.isilon/igem/2017/data/cache/fonts/DroidSansMono-Regular.ttf')
 
 
 cdict = {'red': [(0.0, 0.6056862745, 0.6256862745),
@@ -36,15 +41,22 @@ cdict = {'red': [(0.0, 0.6056862745, 0.6256862745),
                   (0.5, 1.0, 1.0),
                   (1.0, 0.1137254902, 1.0)]}
 
+
 class Stats:
     """
     Holds statistics, saves them as pickle file, plots them as PNGs.
 
     """
 
-
-    def __init__(self, savedir=None, goallabels=None, avoidslabels=None, goalsdict=None, avoidsdict=None, head=None,
-                 pickledir=None):
+    def __init__(
+            self,
+            savedir=None,
+            goallabels=None,
+            avoidslabels=None,
+            goalsdict=None,
+            avoidsdict=None,
+            head=None,
+            pickledir=None):
         """
         Initialises the statistics either empty or from a picklefile.
         Args:
@@ -98,9 +110,16 @@ class Stats:
             name (str): specifies the name of plots that is written
         """
 
-        time = range(len(self.score))
+        time = list(range(len(self.score)))
 
-        plt.figure(1, figsize=(f_width, f_height), dpi=res, facecolor='w', edgecolor='k')
+        plt.figure(
+            1,
+            figsize=(
+                f_width,
+                f_height),
+            dpi=res,
+            facecolor='w',
+            edgecolor='k')
         ax = plt.subplot(111)
         ax.set_ylim(-0.1, 1.1)
         ax.plot(time, self.score, label='Score', zorder=1)
@@ -116,30 +135,39 @@ class Stats:
             ax.plot(time, self.avoids[avoid], label=avoidslabel)
 
         for goal_var in range(len(self.goals)):
-            goals_var_label = 'goal (var score): {}'.format(self.goallabels[goal_var])
+            goals_var_label = 'goal (var score): {}'.format(
+                self.goallabels[goal_var])
             ax.plot(time, self.goals_var[goal_var], label=goals_var_label)
 
         for avoid_var in range(len(self.avoids)):
-            avoid_var_label = 'avoid (var score): {}'.format(self.avoidslables[avoid_var])
+            avoid_var_label = 'avoid (var score): {}'.format(
+                self.avoidslables[avoid_var])
             ax.plot(time, self.avoids_var[avoid_var], label=avoid_var_label)
 
         # not mutating
-        ax.fill_between(time, -0.1, -0.06, where=np.asarray(self.mutating) == 0, facecolor='grey', alpha=0.3)
+        ax.fill_between(time, -0.1, -0.06, where=np.asarray(self.mutating)
+                        == 0, facecolor='grey', alpha=0.3)
         # systematic
-        ax.fill_between(time, -0.06, -0.02, where=np.asarray(self.systematic) == 1, facecolor='red', alpha=0.3)
+        ax.fill_between(time, -0.06, -0.02, where=np.asarray(self.systematic)
+                        == 1, facecolor='red', alpha=0.3)
 
         box = ax.get_position()
         ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
         ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 
-        plt.gcf().text(0.8, 0.2, 'Generation: {}'.format(len(self.mutated)-1))
+        plt.gcf().text(0.8, 0.2, 'Generation: {}'.format(len(self.mutated) - 1))
         plt.ylabel('Score')
         plt.xlabel('Generation')
         plt.title(self.head)
         plt.savefig(os.path.join(self.savedir, name))
         plt.gcf().clear()
 
-    def plotdistoverseq(self, f_width=16, f_height=8, res=200, name='hist.png'):
+    def plotdistoverseq(
+            self,
+            f_width=16,
+            f_height=8,
+            res=200,
+            name='hist.png'):
         """
         Plots how often a position was mutated in a bar plot, including backmutations
         Args:
@@ -149,8 +177,15 @@ class Stats:
             name (str): specifies the name of plots that is written
         """
 
-        plt.figure(1, figsize=(f_width, f_height), dpi=res, facecolor='w', edgecolor='k')
-        seqpos = range(self.lenseq)
+        plt.figure(
+            1,
+            figsize=(
+                f_width,
+                f_height),
+            dpi=res,
+            facecolor='w',
+            edgecolor='k')
+        seqpos = list(range(self.lenseq))
         plt.bar(seqpos, height=self.mutatingpositions, width=1)
         plt.ylabel('Number of mutations')
         plt.xlabel('Sequence position')
@@ -158,7 +193,12 @@ class Stats:
         plt.savefig(os.path.join(self.savedir, name))
         plt.gcf().clear()
 
-    def plotdisttooriginal(self, f_width=16, f_height=8, res=200, name='hist_rel.png'):
+    def plotdisttooriginal(
+            self,
+            f_width=16,
+            f_height=8,
+            res=200,
+            name='hist_rel.png'):
         """
         Plots how often a position was not the original residue
         Args:
@@ -168,18 +208,33 @@ class Stats:
             name (str): specifies the name of plots that is written
         """
 
-        plt.figure(1, figsize=(f_width, f_height), dpi=res, facecolor='w', edgecolor='k')
-        seqpos = range(self.lenseq)
-        plt.bar(seqpos, height=self.mutated_aas[:self.lenseq-1], width=1)
+        plt.figure(
+            1,
+            figsize=(
+                f_width,
+                f_height),
+            dpi=res,
+            facecolor='w',
+            edgecolor='k')
+        seqpos = list(range(self.lenseq))
+        plt.bar(seqpos, height=self.mutated_aas[:self.lenseq - 1], width=1)
         plt.ylabel('Number of mutations')
         plt.xlabel('Sequence position')
         plt.title('Distribution of mutations')
         plt.savefig(os.path.join(self.savedir, name))
         plt.gcf().clear()
 
-
-    def update(self, classes, scores, mutated, mutating, seqs, systematic, classes_variance, blosum_score,
-               mutated_aas):
+    def update(
+            self,
+            classes,
+            scores,
+            mutated,
+            mutating,
+            seqs,
+            systematic,
+            classes_variance,
+            blosum_score,
+            mutated_aas):
         """
         Updates the statistics with a new set of values, dumps the current state of the statistics object as pickle
         Args:
@@ -211,8 +266,10 @@ class Stats:
         for avoid in range(len(self.avoids)):
             self.avoids[avoid].append(bestavoids[avoid])
 
-        bestgoals_var = [(expit(classes_variance[best, goalid])) for goalid in self.goalsdict]
-        bestavoids_var = [(expit(classes_variance[best, avoidid])) for avoidid in self.avoidsdict]
+        bestgoals_var = [(expit(classes_variance[best, goalid]))
+                         for goalid in self.goalsdict]
+        bestavoids_var = [(expit(classes_variance[best, avoidid]))
+                          for avoidid in self.avoidsdict]
 
         for goal in range(len(self.goals_var)):
             self.goals_var[goal].append(bestgoals_var[goal])
@@ -228,25 +285,24 @@ class Stats:
             self.mutated_aas[el] += 1
 
         pickle.dump(
-                [self.score,
-                self.goals,
-                self.avoids,
-                self.savedir,
-                self.goallabels,
-                self.avoidslables,
-                self.goalsdict,
-                self.avoidsdict,
-                self.mutated,
-                self.head,
-                self.mutating,
-                self.mutatingpositions,
-                self.systematic,
-                self.goals_var,
-                self.avoids_var,
-                self.blosum_score,
-                self.mutated_aas],
+            [self.score,
+             self.goals,
+             self.avoids,
+             self.savedir,
+             self.goallabels,
+             self.avoidslables,
+             self.goalsdict,
+             self.avoidsdict,
+             self.mutated,
+             self.head,
+             self.mutating,
+             self.mutatingpositions,
+             self.systematic,
+             self.goals_var,
+             self.avoids_var,
+             self.blosum_score,
+             self.mutated_aas],
             open(os.path.join(self.savedir, 'stats.p'), 'wb'))
-
 
     def load(self, picklefile):
         """
@@ -281,6 +337,7 @@ class Memory:
     Stores the information needed to prevent trying the same sequence multiple times. Calculates the next position,
     amino acid and backmutating position needed for a mutation
     """
+
     def __init__(self, startseq, seq2mutate, maxmut):
         """
         Initialises the memory with a startseq relative to which the number of mutations is calculated and a
@@ -301,7 +358,8 @@ class Memory:
         self.backward = []
         self.aa = 0
         self.break_here = False
-        self.backmutate = np.sum(np.abs(seq2mutate[:20, :] - startseq[:20, :]))/2 >= maxmut
+        self.backmutate = np.sum(
+            np.abs(seq2mutate[:20, :] - startseq[:20, :])) / 2 >= maxmut
 
         if self.backmutate:
             self.new_tobackmutate()
@@ -357,7 +415,9 @@ class Memory:
             rand = random.randint(1, self.maxmut - len(self.backward))
         locusback = -1
         while rand > 0:
-            if np.argmax(self.seq2mutate[:20, locusback + 1]) != np.argmax(self.startseq[:20, locusback +1]): # mutated
+            if np.argmax(self.seq2mutate[:20,
+                                         locusback + 1]) != np.argmax(self.startseq[:20,
+                                                                                    locusback + 1]):  # mutated
                 if locusback not in self.backward:
                     rand -= 1
             locusback += 1
@@ -371,15 +431,17 @@ class Memory:
                 combinations of mutations reachable within a single mutation and backmutation were tried.
         """
 
-        if np.sum(self.seq2mutate[20, :]) - len(self.forward) == 1: # 1 # number of positions that are mutable
+        # 1 # number of positions that are mutable
+        if np.sum(self.seq2mutate[20, :]) - len(self.forward) == 1:
             self.break_here = True
             return
         else:
-            rand = random.randint(1, np.sum(self.seq2mutate[20, :]) - len(self.forward))
+            rand = random.randint(
+                1, np.sum(self.seq2mutate[20, :]) - len(self.forward))
         locus = -1
         while rand > 0:
-            if self.seq2mutate[20, locus +1] ==1:
-                if locus+1 not in self.forward:
+            if self.seq2mutate[20, locus + 1] == 1:
+                if locus + 1 not in self.forward:
                     rand -= 1
             locus += 1
         self.forward.append(locus)
@@ -388,7 +450,6 @@ class Memory:
 class GeneticAlg:
 
     def __init__(self, optionhandler, classifier, TFrecordsgenerator):
-
         """
         Initializes the genetic algorithm with values from a gaia-file, builds the one-hot encoded sequences, the needed
         dicts and stores the provided objects. Initializes the classifier for machine inference
@@ -413,10 +474,14 @@ class GeneticAlg:
         """
         self.opts = optionhandler
         self.TFrecordsgenerator = TFrecordsgenerator
-        sys.stderr.write('Working directory: \n{}\n\n\n'.format(self.opts._summariesdir))
+        sys.stderr.write(
+            'Working directory: \n{}\n\n\n'.format(
+                self.opts._summariesdir))
         sys.stderr.flush()
 
-        self.seqs = np.zeros([self.opts._batchsize, self.opts._depth + 2, self.opts._windowlength]) # 20: to mutate
+        self.seqs = np.zeros([self.opts._batchsize,
+                              self.opts._depth + 2,
+                              self.opts._windowlength])  # 20: to mutate
         # (1) or not to mutate(0), 21: how often the position has been mutated
 
         self.classifier = classifier
@@ -424,14 +489,22 @@ class GeneticAlg:
         self.id2aa = TFrecordsgenerator.id_to_AA
         self.class_dict = TFrecordsgenerator.class_dict
 
-        self.logfile = open(os.path.join(self.opts._summariesdir, 'logfile.txt'), 'w')
+        self.logfile = open(
+            os.path.join(
+                self.opts._summariesdir,
+                'logfile.txt'),
+            'w')
         self.currpath = os.path.join(self.opts._summariesdir, 'currfile.txt')
 
-        print(os.path.join(self.opts._summariesdir, 'logfile.txt'))
+        print((os.path.join(self.opts._summariesdir, 'logfile.txt')))
         seqs_file = open(self.opts._seqfile, 'r')
 
         # save seqs_file
-        write_seqs_file = open(os.path.join(self.opts._summariesdir, 'seqfile.txt'), 'w')
+        write_seqs_file = open(
+            os.path.join(
+                self.opts._summariesdir,
+                'seqfile.txt'),
+            'w')
         write_seqs_file.write(seqs_file.read())
         seqs_file.seek(0)
         head = seqs_file.readline()
@@ -440,26 +513,39 @@ class GeneticAlg:
         else:
             str_goals = head.strip().split(',')
         str_avoids = seqs_file.readline().strip().split(',')
-        self.logfile.write('Read sequence file {}\n'.format(self.opts._seqfile))
+        self.logfile.write(
+            'Read sequence file {}\n'.format(
+                self.opts._seqfile))
 
         self.logfile.write('Goals: {}\n'.format(str_goals))
         self.logfile.write('Avoids: {}\n'.format(str_avoids))
 
-        self.goal_weights = [float(_class.split('>')[0]) for _class in str_goals]
-        self.avoids_weights = [float(_class.split('>')[0]) for _class in str_avoids]
+        self.goal_weights = [float(_class.split('>')[0])
+                             for _class in str_goals]
+        self.avoids_weights = [float(_class.split('>')[0])
+                               for _class in str_avoids]
 
-        self.goals = [self.class_dict[_class.split('>')[1]]['id'] for _class in str_goals]
-        self.avoids = [self.class_dict[_class.split('>')[1]]['id'] for _class in str_avoids]
+        self.goals = [self.class_dict[_class.split(
+            '>')[1]]['id'] for _class in str_goals]
+        self.avoids = [self.class_dict[_class.split(
+            '>')[1]]['id'] for _class in str_avoids]
 
-        self.stats = Stats(self.opts._summariesdir, str_goals, str_avoids, self.goals, self.avoids, head)
+        self.stats = Stats(
+            self.opts._summariesdir,
+            str_goals,
+            str_avoids,
+            self.goals,
+            self.avoids,
+            head)
 
         startseq = seqs_file.readline()
 
-        maxmut_data = seqs_file.readline() # one integer, currently
+        maxmut_data = seqs_file.readline()  # one integer, currently
         self.maxmut = int(maxmut_data.split(':')[1].strip())
 
         not_garbage_weight_data = seqs_file.readline()
-        self.not_garbage_weight = float(not_garbage_weight_data.split(':')[1].strip())
+        self.not_garbage_weight = float(
+            not_garbage_weight_data.split(':')[1].strip())
 
         garbage_weight_data = seqs_file.readline()
         self.garbage_weight = float(garbage_weight_data.split(':')[1].strip())
@@ -471,60 +557,480 @@ class GeneticAlg:
 
         self.logfile.write('Maxmut: {}\n'.format(self.maxmut))
 
-        self.logfile.write('Starting sequence:\n{}\n\n'.format(startseq.strip('\n')))
+        self.logfile.write(
+            'Starting sequence:\n{}\n\n'.format(
+                startseq.strip('\n')))
 
         self.startseq_chars = startseq.upper()
 
-        oh_seq, _, _ = TFrecordsgenerator._seq2tensor(self.startseq_chars.strip('\n'))
+        oh_seq, _, _ = TFrecordsgenerator._seq2tensor(
+            self.startseq_chars.strip('\n'))
 
         self.seqs[0, :20, :] = oh_seq
-        for seqi in range(self.seqs.shape[0]-1):
-            self.seqs[seqi+1] = np.copy(self.seqs[0, :, :])
+        for seqi in range(self.seqs.shape[0] - 1):
+            self.seqs[seqi + 1] = np.copy(self.seqs[0, :, :])
 
         self.startseq = self.seqs[0, :, :]
 
         self.memory = None  # for saving parameters in systematic mode
 
-        self.backmutating = False # for output
+        self.backmutating = False  # for output
 
-        weights = np.asarray([
-            9.26, 1.13, 5.19, 5.78, 3.81, 7.34, 2.18, 6.03, 4.77, 7.47, 2.64, 4.20, 0.424, 4.30, 5.51, 2.51, 5.53, 7.01,
-            0.139, 0.297]) # p/10, w/10, y/10
+        weights = np.asarray([9.26,
+                              1.13,
+                              5.19,
+                              5.78,
+                              3.81,
+                              7.34,
+                              2.18,
+                              6.03,
+                              4.77,
+                              7.47,
+                              2.64,
+                              4.20,
+                              0.424,
+                              4.30,
+                              5.51,
+                              2.51,
+                              5.53,
+                              7.01,
+                              0.139,
+                              0.297])  # p/10, w/10, y/10
         #   A,    C,    D,    E,    F,    G,    H,    I,    K,    L,    M,    N,    P,    Q,    R,    S,    T,    V,
         #   W,    Y
-        # Data from [GenScript](https://www.genscript.com/tools/codon-frequency-table)
+        # Data from
+        # [GenScript](https://www.genscript.com/tools/codon-frequency-table)
 
         self.normalized_weights = weights / np.sum(weights)
 
         self.blosum62 = {
-            'C':  {'C':9,  'S':-1, 'T':-1, 'P':-3, 'A':0,  'G':-3, 'N':-3, 'D':-3, 'E':-4, 'Q':-3, 'H':-3, 'R':-3, 'K':-3, 'M':-1, 'I':-1, 'L':-1, 'V':-1, 'F':-2, 'Y':-2, 'W':-2},
-            'S':  {'C':-1, 'S':4,  'T':1,  'P':-1, 'A':1,  'G':0,  'N':1,  'D':0,  'E':0,  'Q':0,  'H':-1, 'R':-1, 'K':0,  'M':-1, 'I':-2, 'L':-2, 'V':-2, 'F':-2, 'Y':-2, 'W':-3},
-            'T':  {'C':-1, 'S':1,  'T':4,  'P':1,  'A':-1, 'G':1,  'N':0,  'D':1,  'E':0,  'Q':0,  'H':0,  'R':-1, 'K':0,  'M':-1, 'I':-2, 'L':-2, 'V':-2, 'F':-2, 'Y':-2, 'W':-3},
-            'P':  {'C':-3, 'S':-1, 'T':1,  'P':7,  'A':-1, 'G':-2, 'N':-1, 'D':-1, 'E':-1, 'Q':-1, 'H':-2, 'R':-2, 'K':-1, 'M':-2, 'I':-3, 'L':-3, 'V':-2, 'F':-4, 'Y':-3, 'W':-4},
-            'A':  {'C':0,  'S':1,  'T':-1, 'P':-1, 'A':4,  'G':0,  'N':-1, 'D':-2, 'E':-1, 'Q':-1, 'H':-2, 'R':-1, 'K':-1, 'M':-1, 'I':-1, 'L':-1, 'V':-2, 'F':-2, 'Y':-2, 'W':-3},
-            'G':  {'C':-3, 'S':0,  'T':1,  'P':-2, 'A':0,  'G':6,  'N':-2, 'D':-1, 'E':-2, 'Q':-2, 'H':-2, 'R':-2, 'K':-2, 'M':-3, 'I':-4, 'L':-4, 'V':0,  'F':-3, 'Y':-3, 'W':-2},
-            'N':  {'C':-3, 'S':1,  'T':0,  'P':-2, 'A':-2, 'G':0,  'N':6,  'D':1,  'E':0,  'Q':0,  'H':-1, 'R':0,  'K':0,  'M':-2, 'I':-3, 'L':-3, 'V':-3, 'F':-3, 'Y':-2, 'W':-4},
-            'D':  {'C':-3, 'S':0,  'T':1,  'P':-1, 'A':-2, 'G':-1, 'N':1,  'D':6,  'E':2,  'Q':0,  'H':-1, 'R':-2, 'K':-1, 'M':-3, 'I':-3, 'L':-4, 'V':-3, 'F':-3, 'Y':-3, 'W':-4},
-            'E':  {'C':-4, 'S':0,  'T':0,  'P':-1, 'A':-1, 'G':-2, 'N':0,  'D':2,  'E':5,  'Q':2,  'H':0,  'R':0,  'K':1,  'M':-2, 'I':-3, 'L':-3, 'V':-3, 'F':-3, 'Y':-2, 'W':-3},
-            'Q':  {'C':-3, 'S':0,  'T':0,  'P':-1, 'A':-1, 'G':-2, 'N':0,  'D':0,  'E':2,  'Q':5,  'H':0,  'R':1,  'K':1,  'M':0,  'I':-3, 'L':-2, 'V':-2, 'F':-3, 'Y':-1, 'W':-2},
-            'H':  {'C':-3, 'S':-1, 'T':0,  'P':-2, 'A':-2, 'G':-2, 'N':1,  'D':1,  'E':0,  'Q':0,  'H':8,  'R':0,  'K':-1, 'M':-2, 'I':-3, 'L':-3, 'V':-2, 'F':-1, 'Y':2,  'W':-2},
-            'R':  {'C':-3, 'S':-1, 'T':-1, 'P':-2, 'A':-1, 'G':-2, 'N':0,  'D':-2, 'E':0,  'Q':1,  'H':0,  'R':5,  'K':2,  'M':-1, 'I':-3, 'L':-2, 'V':-3, 'F':-3, 'Y':-2, 'W':-3},
-            'K':  {'C':-3, 'S':0,  'T':0,  'P':-1, 'A':-1, 'G':-2, 'N':0,  'D':-1, 'E':1,  'Q':1,  'H':-1, 'R':2,  'K':5,  'M':-1, 'I':-3, 'L':-2, 'V':-3, 'F':-3, 'Y':-2, 'W':-3},
-            'M':  {'C':-1, 'S':-1, 'T':-1, 'P':-2, 'A':-1, 'G':-3, 'N':-2, 'D':-3, 'E':-2, 'Q':0,  'H':-2, 'R':-1, 'K':-1, 'M':5,  'I':1,  'L':2,  'V':-2, 'F':0,  'Y':-1, 'W':-1},
-            'I':  {'C':-1, 'S':-2, 'T':-2, 'P':-3, 'A':-1, 'G':-4, 'N':-3, 'D':-3, 'E':-3, 'Q':-3, 'H':-3, 'R':-3, 'K':-3, 'M':1,  'I':4,  'L':2,  'V':1,  'F':0,  'Y':-1, 'W':-3},
-            'L':  {'C':-1, 'S':-2, 'T':-2, 'P':-3, 'A':-1, 'G':-4, 'N':-3, 'D':-4, 'E':-3, 'Q':-2, 'H':-3, 'R':-2, 'K':-2, 'M':2,  'I':2,  'L':4,  'V':3,  'F':0,  'Y':-1, 'W':-2},
-            'V':  {'C':-1, 'S':-2, 'T':-2, 'P':-2, 'A':0,  'G':-3, 'N':-3, 'D':-3, 'E':-2, 'Q':-2, 'H':-3, 'R':-3, 'K':-2, 'M':1,  'I':3,  'L':1,  'V':4,  'F':-1, 'Y':-1, 'W':-3},
-            'F':  {'C':-2, 'S':-2, 'T':-2, 'P':-4, 'A':-2, 'G':-3, 'N':-3, 'D':-3, 'E':-3, 'Q':-3, 'H':-1, 'R':-3, 'K':-3, 'M':0,  'I':0,  'L':0,  'V':-1, 'F':6,  'Y':3,  'W': 1},
-            'Y':  {'C':-2, 'S':-2, 'T':-2, 'P':-3, 'A':-2, 'G':-3, 'N':-2, 'D':-3, 'E':-2, 'Q':-1, 'H':2,  'R':-2, 'K':-2, 'M':-1, 'I':-1, 'L':-1, 'V':-1, 'F':3,  'Y':7,  'W': 2},
-            'W':  {'C':-2, 'S':-3, 'T':-3, 'P':-4, 'A':-3, 'G':-2, 'N':-4, 'D':-4, 'E':-3, 'Q':-2, 'H':-2, 'R':-3, 'K':-3, 'M':-1, 'I':-3, 'L':-2, 'V':-3, 'F':1,  'Y':2,  'W':11}}
-
+            'C': {
+                'C': 9,
+                'S': -1,
+                'T': -1,
+                'P': -3,
+                'A': 0,
+                'G': -3,
+                'N': -3,
+                'D': -3,
+                'E': -4,
+                'Q': -3,
+                'H': -3,
+                'R': -3,
+                'K': -3,
+                'M': -1,
+                'I': -1,
+                'L': -1,
+                'V': -1,
+                'F': -2,
+                'Y': -2,
+                'W': -2},
+            'S': {
+                'C': -1,
+                'S': 4,
+                'T': 1,
+                'P': -1,
+                'A': 1,
+                'G': 0,
+                'N': 1,
+                'D': 0,
+                'E': 0,
+                'Q': 0,
+                'H': -1,
+                'R': -1,
+                'K': 0,
+                'M': -1,
+                'I': -2,
+                'L': -2,
+                'V': -2,
+                'F': -2,
+                'Y': -2,
+                'W': -3},
+            'T': {
+                'C': -1,
+                'S': 1,
+                'T': 4,
+                'P': 1,
+                'A': -1,
+                'G': 1,
+                'N': 0,
+                'D': 1,
+                'E': 0,
+                'Q': 0,
+                'H': 0,
+                'R': -1,
+                'K': 0,
+                'M': -1,
+                'I': -2,
+                'L': -2,
+                'V': -2,
+                'F': -2,
+                'Y': -2,
+                'W': -3},
+            'P': {
+                'C': -3,
+                'S': -1,
+                'T': 1,
+                'P': 7,
+                'A': -1,
+                'G': -2,
+                'N': -1,
+                'D': -1,
+                'E': -1,
+                'Q': -1,
+                'H': -2,
+                'R': -2,
+                'K': -1,
+                'M': -2,
+                'I': -3,
+                'L': -3,
+                'V': -2,
+                'F': -4,
+                'Y': -3,
+                'W': -4},
+            'A': {
+                'C': 0,
+                'S': 1,
+                'T': -1,
+                'P': -1,
+                'A': 4,
+                'G': 0,
+                'N': -1,
+                'D': -2,
+                'E': -1,
+                'Q': -1,
+                'H': -2,
+                'R': -1,
+                'K': -1,
+                'M': -1,
+                'I': -1,
+                'L': -1,
+                'V': -2,
+                'F': -2,
+                'Y': -2,
+                'W': -3},
+            'G': {
+                'C': -3,
+                'S': 0,
+                'T': 1,
+                'P': -2,
+                'A': 0,
+                'G': 6,
+                'N': -2,
+                'D': -1,
+                'E': -2,
+                'Q': -2,
+                'H': -2,
+                'R': -2,
+                'K': -2,
+                'M': -3,
+                'I': -4,
+                'L': -4,
+                'V': 0,
+                'F': -3,
+                'Y': -3,
+                'W': -2},
+            'N': {
+                'C': -3,
+                'S': 1,
+                'T': 0,
+                'P': -2,
+                'A': -2,
+                'G': 0,
+                'N': 6,
+                'D': 1,
+                'E': 0,
+                'Q': 0,
+                'H': -1,
+                'R': 0,
+                'K': 0,
+                'M': -2,
+                'I': -3,
+                'L': -3,
+                'V': -3,
+                'F': -3,
+                'Y': -2,
+                'W': -4},
+            'D': {
+                'C': -3,
+                'S': 0,
+                'T': 1,
+                'P': -1,
+                'A': -2,
+                'G': -1,
+                'N': 1,
+                'D': 6,
+                'E': 2,
+                'Q': 0,
+                'H': -1,
+                'R': -2,
+                'K': -1,
+                'M': -3,
+                'I': -3,
+                'L': -4,
+                'V': -3,
+                'F': -3,
+                'Y': -3,
+                'W': -4},
+            'E': {
+                'C': -4,
+                'S': 0,
+                'T': 0,
+                'P': -1,
+                'A': -1,
+                'G': -2,
+                'N': 0,
+                'D': 2,
+                'E': 5,
+                'Q': 2,
+                'H': 0,
+                'R': 0,
+                'K': 1,
+                'M': -2,
+                'I': -3,
+                'L': -3,
+                'V': -3,
+                'F': -3,
+                'Y': -2,
+                'W': -3},
+            'Q': {
+                'C': -3,
+                'S': 0,
+                'T': 0,
+                'P': -1,
+                'A': -1,
+                'G': -2,
+                'N': 0,
+                'D': 0,
+                'E': 2,
+                'Q': 5,
+                'H': 0,
+                'R': 1,
+                'K': 1,
+                'M': 0,
+                'I': -3,
+                'L': -2,
+                'V': -2,
+                'F': -3,
+                'Y': -1,
+                'W': -2},
+            'H': {
+                'C': -3,
+                'S': -1,
+                'T': 0,
+                'P': -2,
+                'A': -2,
+                'G': -2,
+                'N': 1,
+                'D': 1,
+                'E': 0,
+                'Q': 0,
+                'H': 8,
+                'R': 0,
+                'K': -1,
+                'M': -2,
+                'I': -3,
+                'L': -3,
+                'V': -2,
+                'F': -1,
+                'Y': 2,
+                'W': -2},
+            'R': {
+                'C': -3,
+                'S': -1,
+                'T': -1,
+                'P': -2,
+                'A': -1,
+                'G': -2,
+                'N': 0,
+                'D': -2,
+                'E': 0,
+                'Q': 1,
+                'H': 0,
+                'R': 5,
+                'K': 2,
+                'M': -1,
+                'I': -3,
+                'L': -2,
+                'V': -3,
+                'F': -3,
+                'Y': -2,
+                'W': -3},
+            'K': {
+                'C': -3,
+                'S': 0,
+                'T': 0,
+                'P': -1,
+                'A': -1,
+                'G': -2,
+                'N': 0,
+                'D': -1,
+                'E': 1,
+                'Q': 1,
+                'H': -1,
+                'R': 2,
+                'K': 5,
+                'M': -1,
+                'I': -3,
+                'L': -2,
+                'V': -3,
+                'F': -3,
+                'Y': -2,
+                'W': -3},
+            'M': {
+                'C': -1,
+                'S': -1,
+                'T': -1,
+                'P': -2,
+                'A': -1,
+                'G': -3,
+                'N': -2,
+                'D': -3,
+                'E': -2,
+                'Q': 0,
+                'H': -2,
+                'R': -1,
+                'K': -1,
+                'M': 5,
+                'I': 1,
+                'L': 2,
+                'V': -2,
+                'F': 0,
+                'Y': -1,
+                'W': -1},
+            'I': {
+                'C': -1,
+                'S': -2,
+                'T': -2,
+                'P': -3,
+                'A': -1,
+                'G': -4,
+                'N': -3,
+                'D': -3,
+                'E': -3,
+                'Q': -3,
+                'H': -3,
+                'R': -3,
+                'K': -3,
+                'M': 1,
+                'I': 4,
+                'L': 2,
+                'V': 1,
+                'F': 0,
+                'Y': -1,
+                'W': -3},
+            'L': {
+                'C': -1,
+                'S': -2,
+                'T': -2,
+                'P': -3,
+                'A': -1,
+                'G': -4,
+                'N': -3,
+                'D': -4,
+                'E': -3,
+                'Q': -2,
+                'H': -3,
+                'R': -2,
+                'K': -2,
+                'M': 2,
+                'I': 2,
+                'L': 4,
+                'V': 3,
+                'F': 0,
+                'Y': -1,
+                'W': -2},
+            'V': {
+                'C': -1,
+                'S': -2,
+                'T': -2,
+                'P': -2,
+                'A': 0,
+                'G': -3,
+                'N': -3,
+                'D': -3,
+                'E': -2,
+                'Q': -2,
+                'H': -3,
+                'R': -3,
+                'K': -2,
+                'M': 1,
+                'I': 3,
+                'L': 1,
+                'V': 4,
+                'F': -1,
+                'Y': -1,
+                'W': -3},
+            'F': {
+                'C': -2,
+                'S': -2,
+                'T': -2,
+                'P': -4,
+                'A': -2,
+                'G': -3,
+                'N': -3,
+                'D': -3,
+                'E': -3,
+                'Q': -3,
+                'H': -1,
+                'R': -3,
+                'K': -3,
+                'M': 0,
+                'I': 0,
+                'L': 0,
+                'V': -1,
+                'F': 6,
+                'Y': 3,
+                'W': 1},
+            'Y': {
+                'C': -2,
+                'S': -2,
+                'T': -2,
+                'P': -3,
+                'A': -2,
+                'G': -3,
+                'N': -2,
+                'D': -3,
+                'E': -2,
+                'Q': -1,
+                'H': 2,
+                'R': -2,
+                'K': -2,
+                'M': -1,
+                'I': -1,
+                'L': -1,
+                'V': -1,
+                'F': 3,
+                'Y': 7,
+                'W': 2},
+            'W': {
+                'C': -2,
+                'S': -3,
+                'T': -3,
+                'P': -4,
+                'A': -3,
+                'G': -2,
+                'N': -4,
+                'D': -4,
+                'E': -3,
+                'Q': -2,
+                'H': -2,
+                'R': -3,
+                'K': -3,
+                'M': -1,
+                'I': -3,
+                'L': -2,
+                'V': -3,
+                'F': 1,
+                'Y': 2,
+                'W': 11}}
 
     def len_seq(self, seq):
         seq_len = 0
-        while np.sum(seq[:20, :], axis=0)[seq_len] == 1 and seq_len < seq.shape[1]:
+        while np.sum(seq[:20, :], axis=0)[
+                seq_len] == 1 and seq_len < seq.shape[1]:
             seq_len += 1
         return seq_len
-
 
     def mutated_seq(self, seq):
         """
@@ -548,26 +1054,30 @@ class GeneticAlg:
         tomutate = random.randint(1, mutatables)
 
         while tomutate > 0:  # go to random locus that is to mutate
-            if seq[20, locus+1] == 1:
+            if seq[20, locus + 1] == 1:
                 tomutate -= 1
             locus += 1
 
         # check if the sequence can be mutated further away from the original:
 
-        if np.sum(np.abs(seq[:20, :] - self.startseq[:20, :]))/2 >= self.maxmut:
+        if np.sum(np.abs(seq[:20, :] - self.startseq[:20, :])
+                  ) / 2 >= self.maxmut:
 
-            if np.argmax(seq[:20, locus]) != np.argmax(self.startseq[:20, locus]): # mutated, still original sequence
+            if np.argmax(seq[:20, locus]) != np.argmax(
+                    self.startseq[:20, locus]):  # mutated, still original sequence
                 seq[:20, locus] = np.zeros(20)
                 seq[aa, locus] = 1  # now a random amino acid
                 seq[21, locus] += 1
 
-            else: # another locus has to be backmutated
+            else:  # another locus has to be backmutated
                 self.backmutating = True
 
                 tobackmutate = random.randint(1, self.maxmut)
                 locusback = -1
                 while tobackmutate > 0:  # go to random locus that is to mutate
-                    if np.argmax(seq[:20, locusback + 1]) != np.argmax(self.startseq[:20, locusback + 1]): # mutated
+                    if np.argmax(seq[:20,
+                                     locusback + 1]) != np.argmax(self.startseq[:20,
+                                                                                locusback + 1]):  # mutated
                         tobackmutate -= 1
                     locusback += 1
 
@@ -576,16 +1086,16 @@ class GeneticAlg:
                 seq[21, locus] += 1
 
                 seq[:20, locusback] = np.zeros(20)
-                seq[np.argmax(self.startseq[:20, locusback]), locusback] = 1 # set one where the starting seq is one
+                # set one where the starting seq is one
+                seq[np.argmax(self.startseq[:20, locusback]), locusback] = 1
                 seq[21, locusback] += 1
 
-        else: # there are mutations left, we can mutate it.
+        else:  # there are mutations left, we can mutate it.
             seq[:20, locus] = np.zeros(20)
             seq[aa, locus] = 1  # now a random amino acid
             seq[21, locus] += 1
 
         return seq
-
 
     def mutates_seq(self, seqs2mutate):
         """
@@ -599,13 +1109,12 @@ class GeneticAlg:
         """
         mutatedseqs = np.ndarray(seqs2mutate.shape)
         for seq in range(seqs2mutate.shape[0]):
-            if seq == 0: # assumes best element is in first place
+            if seq == 0:  # assumes best element is in first place
                 mutatedseqs[seq] = seqs2mutate[seq]
             else:
                 mutatedseqs[seq] = self.mutated_seq(seqs2mutate[seq])
 
         return mutatedseqs
-
 
     def systematic_mutation(self, seqs2mutate):
         """
@@ -620,10 +1129,11 @@ class GeneticAlg:
                 the algorithm will not find a better one
         """
 
-        if not self.memory: # startseq, lenseq, seq2mutate, maxmut
-            self.memory = Memory(self.startseq, seqs2mutate[0, :, :], self.maxmut)
+        if not self.memory:  # startseq, lenseq, seq2mutate, maxmut
+            self.memory = Memory(
+                self.startseq, seqs2mutate[0, :, :], self.maxmut)
 
-        for seqid in range(1, seqs2mutate.shape[0]-1):
+        for seqid in range(1, seqs2mutate.shape[0] - 1):
 
             aa, locus, locusback, backmutate = self.memory.position()
 
@@ -636,12 +1146,12 @@ class GeneticAlg:
             if backmutate:
                 self.backmutating = True
                 seqs2mutate[seqid, :20, locusback] = np.zeros(20)
-                seqs2mutate[seqid, np.argmax(self.startseq[:20, locusback]), locusback] = 1  # set one
-                                                                                        # where the starting seq is one
+                seqs2mutate[seqid, np.argmax(
+                    self.startseq[:20, locusback]), locusback] = 1  # set one
+                # where the starting seq is one
                 seqs2mutate[seqid, 21, locusback] += 1
         continue_here = not self.memory.break_here
         return seqs2mutate, continue_here
-
 
     def choose(self, seqs, scores, survivalpop=-1):
         """
@@ -666,7 +1176,7 @@ class GeneticAlg:
 
         outseqs = np.ndarray(seqs.shape)
 
-        indices = np.array(range(scores.shape[0]))
+        indices = np.array(list(range(scores.shape[0])))
         buff = sorted(indices, key=lambda x: scores[x], reverse=True)
         survival_indices = buff[:len(survivalpop)]
 
@@ -710,9 +1220,9 @@ class GeneticAlg:
         """
 
         with open(self.currpath, 'w') as currfile:
-            currfile.write('{}\nGeneration: {}\n{}'.format(str(datetime.now())[:16],gen, text))
+            currfile.write('{}\nGeneration: {}\n{}'.format(
+                str(datetime.now())[:16], gen, text))
             currfile.flush()
-
 
     def score(self, seq, classes, classes_variance):
         """
@@ -727,7 +1237,7 @@ class GeneticAlg:
         Returns(float): A score for the sequence
 
         """
-        blosumweight = 2/(11*len(self.startseq_chars))
+        blosumweight = 2 / (11 * len(self.startseq_chars))
 
         scores = np.ndarray((self.seqs.shape[0]))
         blosum_scores = np.ndarray((self.seqs.shape[0]))
@@ -735,16 +1245,19 @@ class GeneticAlg:
         for seq in range(scores.shape[0]):
             scores[seq] = 0
             for goal_id in range(len(self.goal_weights)):
-                scores[seq] += self.goal_weights[goal_id] * classes[seq, self.goals[goal_id]] \
-                               - (expit(classes_variance[seq, self.goals[goal_id]]))
+                scores[seq] += self.goal_weights[goal_id] * classes[seq,
+                                                                    self.goals[goal_id]] - (expit(classes_variance[seq,
+                                                                                                                   self.goals[goal_id]]))
             for avoid_id in range(len(self.avoids_weights)):
-                scores[seq] -= self.avoids_weights[avoid_id] * classes[seq, self.avoids[avoid_id]] \
-                               + (expit(classes_variance[seq, self.avoids[avoid_id]]))
+                scores[seq] -= self.avoids_weights[avoid_id] * classes[seq,
+                                                                       self.avoids[avoid_id]] + (expit(classes_variance[seq,
+                                                                                                                        self.avoids[avoid_id]]))
             norm = np.sum(self.goal_weights)
             if norm == 0:
                 norm = 1
-            scores[seq] = scores[seq]/norm
-            blosum_scores[seq] = blosumweight * self.blosumscore(self.seqs[seq])
+            scores[seq] = scores[seq] / norm
+            blosum_scores[seq] = blosumweight * \
+                self.blosumscore(self.seqs[seq])
         scores -= blosum_scores
         return scores, blosum_scores
 
@@ -761,10 +1274,9 @@ class GeneticAlg:
         bscore = 0
         tr_seq = self.translate_seq(seq[:20, :])
         for i in range(len(self.startseq_chars) - 1):
-                bscore += self.blosum62[tr_seq[i]][self.startseq_chars[i]]
+            bscore += self.blosum62[tr_seq[i]][self.startseq_chars[i]]
 
         return bscore
-
 
     def mut_residues(self, seq1, seq2=None):
         """
@@ -786,15 +1298,53 @@ class GeneticAlg:
             seq2 = self.startseq
         str1 = self.translate_seq(seq1[:20, :])
         str2 = self.translate_seq(seq2[:20, :])
-        str1dict = {'A': 0,'C': 0,'D': 0,'E': 0,'F': 0,'G': 0,'H': 0,'I': 0,'K': 0,'L': 0,'M': 0,'N': 0,'P': 0,'Q': 0,
-                    'R': 0,'S': 0,'T': 0,'V': 0,'W': 0,'Y': 0}
-        str2dict = {'A': 0,'C': 0,'D': 0,'E': 0,'F': 0,'G': 0,'H': 0,'I': 0,'K': 0,'L': 0,'M': 0,'N': 0,'P': 0,'Q': 0,
-                    'R': 0,'S': 0,'T': 0,'V': 0,'W': 0,'Y': 0}
+        str1dict = {
+            'A': 0,
+            'C': 0,
+            'D': 0,
+            'E': 0,
+            'F': 0,
+            'G': 0,
+            'H': 0,
+            'I': 0,
+            'K': 0,
+            'L': 0,
+            'M': 0,
+            'N': 0,
+            'P': 0,
+            'Q': 0,
+            'R': 0,
+            'S': 0,
+            'T': 0,
+            'V': 0,
+            'W': 0,
+            'Y': 0}
+        str2dict = {
+            'A': 0,
+            'C': 0,
+            'D': 0,
+            'E': 0,
+            'F': 0,
+            'G': 0,
+            'H': 0,
+            'I': 0,
+            'K': 0,
+            'L': 0,
+            'M': 0,
+            'N': 0,
+            'P': 0,
+            'Q': 0,
+            'R': 0,
+            'S': 0,
+            'T': 0,
+            'V': 0,
+            'W': 0,
+            'Y': 0}
         mutated = []
 
         for i in range(len(str1)):
             if str1[i] != str2[i]:
-                mutated.append('{}{}{}'.format(str2[i], i+1, str1[i]))
+                mutated.append('{}{}{}'.format(str2[i], i + 1, str1[i]))
                 str1dict[str1[i]] += 1
                 str2dict[str2[i]] += 1
 
@@ -812,7 +1362,6 @@ class GeneticAlg:
 
         return outstr
 
-
     def evolve(self, generations=-1):
         """
         Coordinates the evolutionary improvement of a sequence.
@@ -828,14 +1377,15 @@ class GeneticAlg:
         if generations == -1:
             generations = self.opts._generations
 
-        classes, classes_variance = self.classifier.machine_infer(self.seqs[:, :20, :])
+        classes, classes_variance = self.classifier.machine_infer(
+            self.seqs[:, :20, :])
 
         self.logfile.write('classified.\n')
         self.logfile.flush()
 
         goal = [classes[0, goalid] for goalid in self.goals]
         avoiding = [classes[0, avoidid] for avoidid in self.avoids]
-        curr_scores, blosum_score = self.score(None, classes,classes_variance)
+        curr_scores, blosum_score = self.score(None, classes, classes_variance)
         output = 'score: {}\nGoal: {}\nAvoiding: {}\n{}\n'.format(
             curr_scores[0], goal, avoiding,
             self.translate_seq(
@@ -853,7 +1403,8 @@ class GeneticAlg:
         self.logfile.write('start loop:\n')
         self.logfile.flush()
         for gen in range(generations):
-            self.logfile.write('\n\n<<<<<<<<<<Generation {}:>>>>>>>>>>\n'.format(gen))
+            self.logfile.write(
+                '\n\n<<<<<<<<<<Generation {}:>>>>>>>>>>\n'.format(gen))
             self.logfile.flush()
             self.backmutating = False
 
@@ -863,15 +1414,16 @@ class GeneticAlg:
                     systematic = 1
                     if not cont:
                         output = 'Systematically tried all possible mutations to the sequence that can be reached' \
-                                           ' by a single mutation with the given ' \
-                                           'parameters and this is the best:\n\n{}\n\n'.format(output)
+                            ' by a single mutation with the given ' \
+                            'parameters and this is the best:\n\n{}\n\n'.format(output)
                         self.logfile.write(output)
                         self.logfile.flush()
                         self.write_currfile(output, gen)
                         return
                 else:
                     self.seqs = self.mutates_seq(self.seqs)
-                    # reset memory as we were successful with the systematic approach
+                    # reset memory as we were successful with the systematic
+                    # approach
                     self.memory = None
                     systematic = 0
 
@@ -883,26 +1435,39 @@ class GeneticAlg:
                     if first and gen % self.opts._decrease_muts_after_gen == 0 and gen != 0:
                         first = False
                         # debugfile.write('Gen: {}, muts_in_this_gen: {}\n'.format(gen, muts_in_this_gen))
-                        if decrease < self.opts._muts_per_gen-1:
+                        if decrease < self.opts._muts_per_gen - 1:
                             decrease += 1
 
-            classes, classes_variance = self.classifier.machine_infer(self.seqs[:, :20, :])
-            curr_scores, curr_blosum_score = self.score(None, classes, classes_variance)
+            classes, classes_variance = self.classifier.machine_infer(
+                self.seqs[:, :20, :])
+            curr_scores, curr_blosum_score = self.score(
+                None, classes, classes_variance)
 
             bestseq = self.seqs[np.argmax(curr_scores), :, :]
-            mutated = np.sum(np.abs(self.startseq[:20, :] - bestseq[:20, :]))/2
+            mutated = np.sum(
+                np.abs(self.startseq[:20, :] - bestseq[:20, :])) / 2
             mutated = mutated / self.len_seq(self.startseq)
 
-            mutating = 0 if np.sum(np.abs(curr_best[:20, :] - bestseq[:20, :])) == 0 else 1
+            mutating = 0 if np.sum(
+                np.abs(curr_best[:20, :] - bestseq[:20, :])) == 0 else 1
             curr_best = bestseq
 
             mutated_aas = []
             for pos in range(self.seqs.shape[1]):
-                if np.argmax(bestseq[:20, pos]) != np.argmax(self.startseq[:20, pos]):
+                if np.argmax(bestseq[:20, pos]) != np.argmax(
+                        self.startseq[:20, pos]):
                     mutated_aas.append(pos)
 
-            self.stats.update(classes, curr_scores, mutated, mutating, self.seqs, systematic,
-                              classes_variance, curr_blosum_score, mutated_aas)
+            self.stats.update(
+                classes,
+                curr_scores,
+                mutated,
+                mutating,
+                self.seqs,
+                systematic,
+                classes_variance,
+                curr_blosum_score,
+                mutated_aas)
 
             if gen % 100 == 0 and gen != 0:
                 self.stats.plot_all()
@@ -923,10 +1488,13 @@ class GeneticAlg:
             index = 0
 
             for seq in best:
-                goal = [classes[indices[index], goalid] for goalid in self.goals]
-                avoiding = [classes[indices[index], avoidid] for avoidid in self.avoids]
+                goal = [classes[indices[index], goalid]
+                        for goalid in self.goals]
+                avoiding = [classes[indices[index], avoidid]
+                            for avoidid in self.avoids]
 
-                mutated = np.sum(np.abs(self.startseq[:20, :] - self.seqs[seq, :20, :])) / 2
+                mutated = np.sum(
+                    np.abs(self.startseq[:20, :] - self.seqs[seq, :20, :])) / 2
                 mutated = mutated / self.len_seq(self.startseq)
                 output = 'Systematic mode: {}\n' \
                          'Backmutating: {}\n' \
@@ -938,16 +1506,16 @@ class GeneticAlg:
                          'Mutated: {}\n' \
                          '{}\n' \
                          '{}\n\n'.format(
-                            systematic,
-                            self.backmutating,
-                            mutating,
-                            muts_in_this_gen,
-                            curr_scores[indices[index]],
-                            goal, avoiding,
-                            mutated,
-                            self.translate_seq(self.seqs[seq, :20, :]),
-                            self.mut_residues(self.seqs[seq, :, :])
-                                        ).replace("'", "").replace("[", "").replace("]", "").replace("_", "")
+                             systematic,
+                             self.backmutating,
+                             mutating,
+                             muts_in_this_gen,
+                             curr_scores[indices[index]],
+                             goal, avoiding,
+                             mutated,
+                             self.translate_seq(self.seqs[seq, :20, :]),
+                             self.mut_residues(self.seqs[seq, :, :])
+                         ).replace("'", "").replace("[", "").replace("]", "").replace("_", "")
                 self.logfile.write(output)
                 self.logfile.flush()
                 if first:
@@ -969,7 +1537,8 @@ class GeneticAlg:
             Useful to decrease the number of possible combinations.
 
         """
-        self.logfile.write('Scoring combinations from file {}.\n'.format(ipath))
+        self.logfile.write(
+            'Scoring combinations from file {}.\n'.format(ipath))
         with open(ipath) as ifile:
             lines = ifile.readlines()
         to_comb = [line.strip().split(', ') for line in lines]
@@ -978,8 +1547,8 @@ class GeneticAlg:
 
         combs = []
         flat_combs = []
-        for r in range(min(len(to_comb), max2combine+1)):
-           combs.extend(list(itertools.combinations(to_comb, r)))
+        for r in range(min(len(to_comb), max2combine + 1)):
+            combs.extend(list(itertools.combinations(to_comb, r)))
         combs = list(itertools.chain(combs))
         self.logfile.write('combs: \n')
         pprint.pprint(combs, self.logfile)
@@ -991,13 +1560,17 @@ class GeneticAlg:
         self.logfile.write('flat_combs: \n')
         pprint.pprint(flat_combs, self.logfile)
 
-        self.logfile.write('Calculating {} combinations.\n'.format(len(flat_combs)))
+        self.logfile.write(
+            'Calculating {} combinations.\n'.format(
+                len(flat_combs)))
         self.logfile.flush()
         data = []
         counter = 0
         for comb in flat_combs:
             if counter % 1000 == 0:
-                self.logfile.write('Scored {} % of all combinations so far.\n'.format(counter/len(flat_combs)))
+                self.logfile.write(
+                    'Scored {} % of all combinations so far.\n'.format(
+                        counter / len(flat_combs)))
                 self.logfile.flush()
             counter += 1
             mutated = self.mutate_specific(comb)
@@ -1012,7 +1585,8 @@ class GeneticAlg:
             # self.logfile.write('done.')
             # self.logfile.flush()
 
-            classes, classes_variance = self.classifier.machine_infer(np.expand_dims(mutated, axis=0))
+            classes, classes_variance = self.classifier.machine_infer(
+                np.expand_dims(mutated, axis=0))
             goal = []
             goal_var = []
             avoid = []
@@ -1025,23 +1599,37 @@ class GeneticAlg:
                 avoid_var.append(classes_variance[0, self.avoids[avoid_id]])
 
             data.append((comb, goal, goal_var, avoid, avoid_var,
-                                                           self.translate_seq(mutated)))
+                         self.translate_seq(mutated)))
         self.logfile.write('Scored all combinations.\n')
         self.logfile.flush()
         data = sorted(data, key=lambda x: x[1][0], reverse=True)
         self.logfile.write('Sorted all combinations.\n')
         self.logfile.flush()
-        pickle.dump(data, open(os.path.join(self.opts._summariesdir, 'comb.p'), 'wb'))
+        pickle.dump(
+            data,
+            open(
+                os.path.join(
+                    self.opts._summariesdir,
+                    'comb.p'),
+                'wb'))
         self.logfile.write('Dumped data as pickle file.\n\n\nData:\n=====\n\n')
         self.logfile.flush()
         for entry in data:
-            self.logfile.write('Mutations: {}\n'
-                               'Goal scores: {}\n'
-                               'Goal variances: {}\n'
-                               'Avoid scores: {}\n'
-                               'Avoid variances: {}\n'
-                               'Sequence: \n{}\n\n'.format(
-                entry[0], entry[1], entry[2], entry[3], entry[4], entry[5].replace('_', '')))
+            self.logfile.write(
+                'Mutations: {}\n'
+                'Goal scores: {}\n'
+                'Goal variances: {}\n'
+                'Avoid scores: {}\n'
+                'Avoid variances: {}\n'
+                'Sequence: \n{}\n\n'.format(
+                    entry[0],
+                    entry[1],
+                    entry[2],
+                    entry[3],
+                    entry[4],
+                    entry[5].replace(
+                        '_',
+                        '')))
 
     def score_combinations(self, ipath, max2combine):
         """
@@ -1057,7 +1645,8 @@ class GeneticAlg:
             Useful to decrease the number of possible combinations.
 
         """
-        self.logfile.write('Scoring combinations from file {}.\n'.format(ipath))
+        self.logfile.write(
+            'Scoring combinations from file {}.\n'.format(ipath))
         with open(ipath) as ifile:
             lines = ifile.readlines()
         to_comb = [line.strip().split(', ') for line in lines]
@@ -1066,8 +1655,8 @@ class GeneticAlg:
 
         combs = []
         flat_combs = []
-        for r in range(min(len(to_comb), max2combine+1)):
-           combs.extend(list(itertools.combinations(to_comb, r)))
+        for r in range(min(len(to_comb), max2combine + 1)):
+            combs.extend(list(itertools.combinations(to_comb, r)))
         combs = list(itertools.chain(combs))
         self.logfile.write('combs: \n')
         pprint.pprint(combs, self.logfile)
@@ -1079,13 +1668,17 @@ class GeneticAlg:
         self.logfile.write('flat_combs: \n')
         pprint.pprint(flat_combs, self.logfile)
 
-        self.logfile.write('Calculating {} combinations.\n'.format(len(flat_combs)))
+        self.logfile.write(
+            'Calculating {} combinations.\n'.format(
+                len(flat_combs)))
         self.logfile.flush()
         data = []
         counter = 0
         for comb in flat_combs:
             if counter % 1000 == 0:
-                self.logfile.write('Scored {} % of all combinations so far.\n'.format(counter/len(flat_combs)))
+                self.logfile.write(
+                    'Scored {} % of all combinations so far.\n'.format(
+                        counter / len(flat_combs)))
                 self.logfile.flush()
             counter += 1
             mutated = self.mutate_specific(comb)
@@ -1100,7 +1693,8 @@ class GeneticAlg:
             # self.logfile.write('done.')
             # self.logfile.flush()
 
-            classes, classes_variance = self.classifier.machine_infer(np.expand_dims(mutated, axis=0))
+            classes, classes_variance = self.classifier.machine_infer(
+                np.expand_dims(mutated, axis=0))
             goal = []
             goal_var = []
             avoid = []
@@ -1113,24 +1707,37 @@ class GeneticAlg:
                 avoid_var.append(classes_variance[0, self.avoids[avoid_id]])
 
             data.append((comb, goal, goal_var, avoid, avoid_var,
-                                                           self.translate_seq(mutated)))
+                         self.translate_seq(mutated)))
         self.logfile.write('Scored all combinations.\n')
         self.logfile.flush()
         data = sorted(data, key=lambda x: x[1][0], reverse=True)
         self.logfile.write('Sorted all combinations.\n')
         self.logfile.flush()
-        pickle.dump(data, open(os.path.join(self.opts._summariesdir, 'comb.p'), 'wb'))
+        pickle.dump(
+            data,
+            open(
+                os.path.join(
+                    self.opts._summariesdir,
+                    'comb.p'),
+                'wb'))
         self.logfile.write('Dumped data as pickle file.\n\n\nData:\n=====\n\n')
         self.logfile.flush()
         for entry in data:
-            self.logfile.write('Mutations: {}\n'
-                               'Goal scores: {}\n'
-                               'Goal variances: {}\n'
-                               'Avoid scores: {}\n'
-                               'Avoid variances: {}\n'
-                               'Sequence: \n{}\n\n'.format(
-                entry[0], entry[1], entry[2], entry[3], entry[4], entry[5].replace('_', '')))
-
+            self.logfile.write(
+                'Mutations: {}\n'
+                'Goal scores: {}\n'
+                'Goal variances: {}\n'
+                'Avoid scores: {}\n'
+                'Avoid variances: {}\n'
+                'Sequence: \n{}\n\n'.format(
+                    entry[0],
+                    entry[1],
+                    entry[2],
+                    entry[3],
+                    entry[4],
+                    entry[5].replace(
+                        '_',
+                        '')))
 
     def mutate_specific(self, muts, seq=None):
         """
@@ -1145,19 +1752,38 @@ class GeneticAlg:
 
         """
 
-        if seq == None:
+        if seq is None:
             seq = self.startseq[:20, :].copy()
         else:
             seq, _, _ = self.TFrecordsgenerator._seq2tensor(seq.strip('\n'))
         # sequence is now in one-hot encoding
-        aas = ['A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'V', 'W', 'Y']
+        aas = [
+            'A',
+            'C',
+            'D',
+            'E',
+            'F',
+            'G',
+            'H',
+            'I',
+            'K',
+            'L',
+            'M',
+            'N',
+            'P',
+            'Q',
+            'R',
+            'S',
+            'T',
+            'V',
+            'W',
+            'Y']
 
         for mut in muts:
-            seq[:, int(mut[:-1])-1] = np.zeros(20) # reset
-            seq[aas.index(mut[-1:]), int(mut[:-1])-1] = 1
+            seq[:, int(mut[:-1]) - 1] = np.zeros(20)  # reset
+            seq[aas.index(mut[-1:]), int(mut[:-1]) - 1] = 1
 
         return seq
-
 
     def count_muts(self, seq):
         """
@@ -1168,7 +1794,6 @@ class GeneticAlg:
         Returns (int): number of mutations in sequence relative to starting sequence
         """
         return np.sum(np.abs(self.startseq[:20, :] - seq[:20, :])) / 2
-
 
     def randomize(self, until):
         """
@@ -1196,7 +1821,8 @@ class GeneticAlg:
             for idx in range(seqs[0].shape[0]):
                 for i in range(lever):
                     while self.count_muts(seqs[i][idx, :, :]) < muts:
-                        seqs[i][idx, :, :] = self.mutated_seq(seqs[i][idx, :, :])
+                        seqs[i][idx, :, :] = self.mutated_seq(
+                            seqs[i][idx, :, :])
 
             # now we have 100 sequences that have exactly muts mutations
             data_one_mut.append(muts)
@@ -1208,14 +1834,17 @@ class GeneticAlg:
             avoid = []
             avoid_var = []
             for i in range(lever):
-                classes, classes_variance = self.classifier.machine_infer(seqs[i][:, :20, :], self.opts._batchsize)
+                classes, classes_variance = self.classifier.machine_infer(
+                    seqs[i][:, :20, :], self.opts._batchsize)
                 for idx in range(seqs[i].shape[0]):
                     for goal_id in range(len(self.goal_weights)):
                         goal.append(classes[idx, self.goals[goal_id]])
-                        goal_var.append(classes_variance[idx, self.goals[goal_id]])
+                        goal_var.append(
+                            classes_variance[idx, self.goals[goal_id]])
                     for avoid_id in range(len(self.avoids_weights)):
                         avoid.append(classes[idx, self.avoids[avoid_id]])
-                        avoid_var.append(classes_variance[idx, self.avoids[avoid_id]])
+                        avoid_var.append(
+                            classes_variance[idx, self.avoids[avoid_id]])
 
             data_one_mut.append(goal)
             data_one_mut.append(goal_var)
@@ -1235,13 +1864,24 @@ class GeneticAlg:
             data.append(data_one_mut)
             reduced.append(reduced_one_mut)
 
-        pickle.dump(data, open(os.path.join(self.opts._summariesdir, 'data.p'), 'wb'))
-        pickle.dump(reduced, open(os.path.join(self.opts._summariesdir, 'reduced.p'), 'wb'))
+        pickle.dump(
+            data,
+            open(
+                os.path.join(
+                    self.opts._summariesdir,
+                    'data.p'),
+                'wb'))
+        pickle.dump(
+            reduced,
+            open(
+                os.path.join(
+                    self.opts._summariesdir,
+                    'reduced.p'),
+                'wb'))
         self.logfile.write('Dumped picklefile.\n')
         self.logfile.flush()
 
         plot_data(reduced, self.opts._summariesdir, self.logfile)
-
 
     def randomize_all(self, until):
         """
@@ -1269,7 +1909,8 @@ class GeneticAlg:
             for idx in range(seqs[0].shape[0]):
                 for i in range(lever):
                     while self.count_muts(seqs[i][idx, :, :]) < muts:
-                        seqs[i][idx, :, :] = self.mutated_seq(seqs[i][idx, :, :])
+                        seqs[i][idx, :, :] = self.mutated_seq(
+                            seqs[i][idx, :, :])
 
             # now we have 100 sequences that have exactly muts mutations
             data_one_mut.append(muts)
@@ -1281,7 +1922,8 @@ class GeneticAlg:
             avoid = []
             avoid_var = []
             for i in range(lever):
-                classes, classes_variance = self.classifier.machine_infer(seqs[i][:, :20, :])
+                classes, classes_variance = self.classifier.machine_infer(
+                    seqs[i][:, :20, :])
                 for idx in range(seqs[i].shape[0]):
                     for goal_id in range(len(self.goal_weights)):
                         goal.append(classes[idx, :])
@@ -1299,19 +1941,41 @@ class GeneticAlg:
             data.append(data_one_mut)
             reduced.append(reduced_one_mut)
 
-        pickle.dump(data, open(os.path.join(self.opts._summariesdir, 'data.p'), 'wb'))
-        pickle.dump(reduced, open(os.path.join(self.opts._summariesdir, 'reduced.p'), 'wb'))
+        pickle.dump(
+            data,
+            open(
+                os.path.join(
+                    self.opts._summariesdir,
+                    'data.p'),
+                'wb'))
+        pickle.dump(
+            reduced,
+            open(
+                os.path.join(
+                    self.opts._summariesdir,
+                    'reduced.p'),
+                'wb'))
         self.logfile.write('Dumped pickle.\n')
         self.logfile.flush()
 
         to_highlight = ['GO:0004818', 'GO:0004827']
         highl = [self.class_dict[i]['id'] for i in to_highlight]
-        plot_all_data(reduced, self.goals[0], self.opts._summariesdir, self.logfile, highl=highl,
-                      highl_names=to_highlight)
+        plot_all_data(
+            reduced,
+            self.goals[0],
+            self.opts._summariesdir,
+            self.logfile,
+            highl=highl,
+            highl_names=to_highlight)
 
-
-    def walk(self, highl=[100000], highl_names=['Default'], f_width=10, f_height=8,
-                          res=80, name='walk_data.png'):
+    def walk(
+            self,
+            highl=[100000],
+            highl_names=['Default'],
+            f_width=10,
+            f_height=8,
+            res=80,
+            name='walk_data.png'):
         """
         Calculates all possible single mutants of a sequence, makes data available to plot, calls plotting functions
             and dumps pickle files
@@ -1328,7 +1992,8 @@ class GeneticAlg:
         """
 
         data = []
-        wt_classes, wt_classes_variance = self.classifier.machine_infer(self.seqs[:, :20, :])
+        wt_classes, wt_classes_variance = self.classifier.machine_infer(
+            self.seqs[:, :20, :])
 
         for pos in range(len(self.startseq_chars)):
             scores = []
@@ -1342,7 +2007,8 @@ class GeneticAlg:
             for aa in range(20):
                 seqs[aa, :20, pos] = np.zeros(20)  # reset
                 seqs[aa, aa, pos] = 1
-            classes, classes_variance = self.classifier.machine_infer(seqs[:, :20, :])
+            classes, classes_variance = self.classifier.machine_infer(
+                seqs[:, :20, :])
             scores.append(classes)
             variances.append(classes_variance)
 
@@ -1351,18 +2017,48 @@ class GeneticAlg:
             variances.append(np.mean(classes_variance, axis=0))
             variances_var.append(np.var(classes_variance, axis=0))
 
-            datapoint = [scores, variances, scores_mean, scores_var, variances_mean, variances_var, self.startseq_chars]
+            datapoint = [
+                scores,
+                variances,
+                scores_mean,
+                scores_var,
+                variances_mean,
+                variances_var,
+                self.startseq_chars]
             data.append(datapoint)
 
-        pickle.dump(data, open(os.path.join(self.opts._summariesdir, 'walk_data.p'), 'wb'))
-        pickle.dump(wt_classes[:, 0], open(os.path.join(self.opts._summariesdir, 'wt_scores.p'), 'wb'))
+        pickle.dump(
+            data,
+            open(
+                os.path.join(
+                    self.opts._summariesdir,
+                    'walk_data.p'),
+                'wb'))
+        pickle.dump(wt_classes[:, 0], open(os.path.join(
+            self.opts._summariesdir, 'wt_scores.p'), 'wb'))
         to_highlight = ['GO:0004818', 'GO:0004827']
         highl = [self.class_dict[i]['id'] for i in to_highlight]
-        plot_walk(data, self.goals[0], self.opts._summariesdir, self.logfile, wt_scores=wt_classes[0, :],
-                  highl=highl, highl_names=to_highlight, name='walk_data.png')
+        plot_walk(data,
+                  self.goals[0],
+                  self.opts._summariesdir,
+                  self.logfile,
+                  wt_scores=wt_classes[0,
+                                       :],
+                  highl=highl,
+                  highl_names=to_highlight,
+                  name='walk_data.png')
 
 
-def draw_heatmap(scores, goal_class, wt_scores, startseq_chars, wdir, logfile, f_width=50, f_height=4, res=300):
+def draw_heatmap(
+        scores,
+        goal_class,
+        wt_scores,
+        startseq_chars,
+        wdir,
+        logfile,
+        f_width=50,
+        f_height=4,
+        res=300):
     """
     Draws a heatmap with the sequence on x-axis and amino acid to which a specific position is mutated on y-axis.
     The color indicates the score of the mutant defines by sequence position and amino acid
@@ -1381,17 +2077,37 @@ def draw_heatmap(scores, goal_class, wt_scores, startseq_chars, wdir, logfile, f
     """
 
     ccmap = mplcolors.LinearSegmentedColormap('by_cmap', cdict)
-    aas = ['A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'V', 'W', 'Y']
+    aas = [
+        'A',
+        'C',
+        'D',
+        'E',
+        'F',
+        'G',
+        'H',
+        'I',
+        'K',
+        'L',
+        'M',
+        'N',
+        'P',
+        'Q',
+        'R',
+        'S',
+        'T',
+        'V',
+        'W',
+        'Y']
     fig, ax = plt.subplots(figsize=(f_width, f_height), dpi=res)
 
     for idx in range(scores.shape[0]):
         for idy in range(scores.shape[1]):
-            scores[idx, idy, goal_class] = scores[idx, idy, goal_class] - wt_scores[goal_class]
-
+            scores[idx, idy, goal_class] = scores[idx,
+                                                  idy, goal_class] - wt_scores[goal_class]
 
     pcm = ax.imshow(scores[:, :-1, goal_class], origin='lower',
                     aspect='auto',
-                    cmap = ccmap)
+                    cmap=ccmap)
     clb = fig.colorbar(pcm, ax=ax)
     clb.set_label('Mutant score', y=0.5)
 
@@ -1402,10 +2118,10 @@ def draw_heatmap(scores, goal_class, wt_scores, startseq_chars, wdir, logfile, f
     xticksminor = []
     yticks = []
 
-    for pos in range(scores.shape[1]-1):
+    for pos in range(scores.shape[1] - 1):
         xtickvalsminor.append(startseq_chars[pos])
         xticksminor.append(pos)
-        xtickvals.append(pos + 1) # 1-based counting for sequence position
+        xtickvals.append(pos + 1)  # 1-based counting for sequence position
         xticks.append(pos)
     for aa in range(20):
         ytickvals.append(aas[aa])
@@ -1424,10 +2140,10 @@ def draw_heatmap(scores, goal_class, wt_scores, startseq_chars, wdir, logfile, f
                     labelbottom='on',
                     labelsize=4,
                     pad=15)
-    ax.tick_params( axis='x',
-                    which='minor',
-                    bottom='off',
-                    labelbottom='on')
+    ax.tick_params(axis='x',
+                   which='minor',
+                   bottom='off',
+                   labelbottom='on')
 
     ax.set_xticks(xticks, minor=False)
     ax.set_xticklabels(xtickvals, minor=False, rotation='vertical')
@@ -1445,9 +2161,19 @@ def draw_heatmap(scores, goal_class, wt_scores, startseq_chars, wdir, logfile, f
     plt.close()
 
 
-def plot_walk(data, goal, wdir, logfile, wt_scores=None, highl=[10000], highl_names=['Default'], aas = [0], f_width=5, f_height=4,
-                          res=300, name='walk_data_HD.png'):
-
+def plot_walk(
+        data,
+        goal,
+        wdir,
+        logfile,
+        wt_scores=None,
+        highl=[10000],
+        highl_names=['Default'],
+        aas=[0],
+        f_width=5,
+        f_height=4,
+        res=300,
+        name='walk_data_HD.png'):
     """Plots graphs indicating how the scores change, when a specific position is mutated.
     Args:
         data (list): that stores all relevant data, either from method walk or from saved pickle
@@ -1469,9 +2195,9 @@ def plot_walk(data, goal, wdir, logfile, wt_scores=None, highl=[10000], highl_na
 
     plt.switch_backend('agg')
     number_classes = len(data[0][0][0][0])
-    logfile.write('number of classes: {}\n'.format (number_classes))
+    logfile.write('number of classes: {}\n'.format(number_classes))
 
-    scores_mean = [[] for _ in range (number_classes)]
+    scores_mean = [[] for _ in range(number_classes)]
     scores_var = [[] for _ in range(number_classes)]
     variances_mean = [[] for _ in range(number_classes)]
     variances_var = [[] for _ in range(number_classes)]
@@ -1494,9 +2220,10 @@ def plot_walk(data, goal, wdir, logfile, wt_scores=None, highl=[10000], highl_na
                 pprint.pprint(datapoint[0][0][aa][score], logfile)
                 scores_heatmap[aa, pos, score] = datapoint[0][0][aa][score]
         pos += 1
-    pos = range(len(data))
+    pos = list(range(len(data)))
 
-    draw_heatmap(scores_heatmap, goal, wt_scores=wt_scores, wdir=wdir, logfile=logfile, startseq_chars=data[0][-1])
+    draw_heatmap(scores_heatmap, goal, wt_scores=wt_scores,
+                 wdir=wdir, logfile=logfile, startseq_chars=data[0][-1])
 
     # mean plots:
 
@@ -1506,24 +2233,45 @@ def plot_walk(data, goal, wdir, logfile, wt_scores=None, highl=[10000], highl_na
 
     for i in range(number_classes):
         if i == goal:
-            lower = np.asarray(scores_mean[i]) + np.asarray(scores_var[i]).tolist()
-            upper = np.asarray(scores_mean[i]) - np.asarray(scores_var[i]).tolist()
-            p1 = ax.plot(pos, scores_mean[i], label='Goal', zorder=1000, color='#9D1C20', linewidth=0.25)
+            lower = np.asarray(scores_mean[i]) + \
+                np.asarray(scores_var[i]).tolist()
+            upper = np.asarray(scores_mean[i]) - \
+                np.asarray(scores_var[i]).tolist()
+            p1 = ax.plot(
+                pos,
+                scores_mean[i],
+                label='Goal',
+                zorder=1000,
+                color='#9D1C20',
+                linewidth=0.25)
             # p2 = ax.plot(pos, lower, label='Goal - sigma', color='#BB5651')
             # p3 = ax.plot(pos, upper, label='Goal + sigma', color='#BB5651')
             # ax.fill_between(pos, lower, upper, facecolor='#D89F9C')
         else:
             if i in highl:
-                lower = np.asarray(scores_mean[i]) + np.asarray(scores_var[i]).tolist()
-                upper = np.asarray(scores_mean[i]) - np.asarray(scores_var[i]).tolist()
-                p4 = ax.plot(pos, scores_mean[i], label=highl_names[0] + ",\n" + highl_names[1], zorder=999,
-                             color='#005493', linewidth=0.25)
+                lower = np.asarray(
+                    scores_mean[i]) + np.asarray(scores_var[i]).tolist()
+                upper = np.asarray(
+                    scores_mean[i]) - np.asarray(scores_var[i]).tolist()
+                p4 = ax.plot(
+                    pos,
+                    scores_mean[i],
+                    label=highl_names[0] +
+                    ",\n" +
+                    highl_names[1],
+                    zorder=999,
+                    color='#005493',
+                    linewidth=0.25)
                 # p5 = ax.plot(pos, lower, label='Goal - sigma', color='#6698BE')
                 # p6 = ax.plot(pos, upper, label='Goal + sigma', color='#6698BE')
                 # ax.fill_between(pos, lower, upper, facecolor='#B2CBDD')
             else:
-                p7 = ax.plot(pos, scores_mean[i], label='Alt', color='#009193', linewidth=0.25)
-
+                p7 = ax.plot(
+                    pos,
+                    scores_mean[i],
+                    label='Alt',
+                    color='#009193',
+                    linewidth=0.25)
 
     ax.xaxis.set_ticks_position('bottom')
     ax.yaxis.set_ticks_position('left')
@@ -1533,8 +2281,8 @@ def plot_walk(data, goal, wdir, logfile, wt_scores=None, highl=[10000], highl_na
     ax.set_position([box.x0, box.y0, box.width * 0.7, box.height * 0.9])
 
     try:
-        axes = p1 + p4 +p7
-    except:
+        axes = p1 + p4 + p7
+    except BaseException:
         axes = p1 + p7
 
     legs = [a.get_label() for a in axes]
@@ -1542,7 +2290,9 @@ def plot_walk(data, goal, wdir, logfile, wt_scores=None, highl=[10000], highl_na
 
     ax.set_ylabel('Score', fontproperties=font)
     plt.xlabel('Mutations', fontproperties=font)
-    plt.title('Comparison of different mutation rates and scores', fontproperties=font)
+    plt.title(
+        'Comparison of different mutation rates and scores',
+        fontproperties=font)
     plt.savefig(os.path.join(wdir, 'means{}'.format(name)))
     plt.gcf().clear()
     logfile.write('Plotted means.\n')
@@ -1556,24 +2306,46 @@ def plot_walk(data, goal, wdir, logfile, wt_scores=None, highl=[10000], highl_na
 
         for i in range(len(scores_mean)):
             if i == goal:
-                lower = np.asarray(scores[aa][i]) + np.asarray(scores_var[i]).tolist()
-                upper = np.asarray(scores[aa][i]) - np.asarray(scores_var[i]).tolist()
-                p1 = ax.plot(pos, scores[aa][i], label='Goal', zorder=1000, color='#9D1C20', linewidth=0.25)
+                lower = np.asarray(scores[aa][i]) + \
+                    np.asarray(scores_var[i]).tolist()
+                upper = np.asarray(scores[aa][i]) - \
+                    np.asarray(scores_var[i]).tolist()
+                p1 = ax.plot(
+                    pos,
+                    scores[aa][i],
+                    label='Goal',
+                    zorder=1000,
+                    color='#9D1C20',
+                    linewidth=0.25)
                 # p2 = ax.plot(pos, lower, label='Goal - sigma', color='#BB5651')
                 # p3 = ax.plot(pos, upper, label='Goal + sigma', color='#BB5651')
                 # ax.fill_between(pos, lower, upper, facecolor='#D89F9C')
             else:
                 if i in highl:
                     p4 = []
-                    lower = np.asarray(scores[aa][i]) + np.asarray(scores_var[i]).tolist()
-                    upper = np.asarray(scores[aa][i]) - np.asarray(scores_var[i]).tolist()
-                    p4 = ax.plot(pos, scores[aa][i], label=highl_names[0] + ",\n" + highl_names[1], zorder=999,
-                                 color='#005493', linewidth=0.25)
+                    lower = np.asarray(scores[aa][i]) + \
+                        np.asarray(scores_var[i]).tolist()
+                    upper = np.asarray(scores[aa][i]) - \
+                        np.asarray(scores_var[i]).tolist()
+                    p4 = ax.plot(
+                        pos,
+                        scores[aa][i],
+                        label=highl_names[0] +
+                        ",\n" +
+                        highl_names[1],
+                        zorder=999,
+                        color='#005493',
+                        linewidth=0.25)
                    # p5 = ax.plot(pos, lower, label='Goal - sigma', color='#6698BE')
                    # p6 = ax.plot(pos, upper, label='Goal + sigma', color='#6698BE')
                    # ax.fill_between(pos, lower, upper, facecolor='#B2CBDD')
                 else:
-                    p7 = ax.plot(pos, scores[aa][i], label='Alt', color='#009193', linewidth=0.25)
+                    p7 = ax.plot(
+                        pos,
+                        scores[aa][i],
+                        label='Alt',
+                        color='#009193',
+                        linewidth=0.25)
 
         ax.xaxis.set_ticks_position('bottom')
         ax.yaxis.set_ticks_position('left')
@@ -1584,7 +2356,7 @@ def plot_walk(data, goal, wdir, logfile, wt_scores=None, highl=[10000], highl_na
 
         try:
             axes = p1 + p4 + p7
-        except:
+        except BaseException:
             axes = p1 + p7
 
         legs = [a.get_label() for a in axes]
@@ -1592,27 +2364,51 @@ def plot_walk(data, goal, wdir, logfile, wt_scores=None, highl=[10000], highl_na
 
         ax.set_ylabel('Score', fontproperties=font)
         plt.xlabel('Mutations', fontproperties=font)
-        plt.title('Comparison of different mutation rates and scores', fontproperties=font)
+        plt.title(
+            'Comparison of different mutation rates and scores',
+            fontproperties=font)
         plt.savefig(os.path.join(wdir, 'means_{}.png'.format(aa)))
         plt.gcf().clear()
         logfile.write('Plottet for {}.\n'.format(aa))
         logfile.flush()
 
-    if wt_scores is not None: # each subtracted with the wt_score
+    if wt_scores is not None:  # each subtracted with the wt_score
 
         plt.figure(2, figsize=(20, f_height), dpi=res)
         ax = plt.subplot(111)
 
         for i in range(number_classes):
-            sub_mean = (np.asarray(scores_mean[i]) - np.asarray(wt_scores[i])).tolist()
+            sub_mean = (
+                np.asarray(
+                    scores_mean[i]) -
+                np.asarray(
+                    wt_scores[i])).tolist()
             if i == goal:
-                p1 = ax.plot(pos, sub_mean, label='Goal', zorder=1000, color='#9D1C20', linewidth=0.25)
+                p1 = ax.plot(
+                    pos,
+                    sub_mean,
+                    label='Goal',
+                    zorder=1000,
+                    color='#9D1C20',
+                    linewidth=0.25)
             else:
                 if i in highl:
-                    p4 = ax.plot(pos, sub_mean, label=highl_names[0] + ",\n" + highl_names[1], zorder=999,
-                                 color='#005493', linewidth=0.25)
+                    p4 = ax.plot(
+                        pos,
+                        sub_mean,
+                        label=highl_names[0] +
+                        ",\n" +
+                        highl_names[1],
+                        zorder=999,
+                        color='#005493',
+                        linewidth=0.25)
                 else:
-                    p7 = ax.plot(pos, sub_mean, label='Alt', color='#B3DEDE', linewidth=0.25)
+                    p7 = ax.plot(
+                        pos,
+                        sub_mean,
+                        label='Alt',
+                        color='#B3DEDE',
+                        linewidth=0.25)
 
         ax.xaxis.set_ticks_position('bottom')
         ax.yaxis.set_ticks_position('left')
@@ -1620,11 +2416,12 @@ def plot_walk(data, goal, wdir, logfile, wt_scores=None, highl=[10000], highl_na
         # box = ax.get_position()
         # ax.set_position([box.x0, box.y0, box.width * 0.8, box.height * 0.9])
         for pos in range(len(data[0][-1])):
-            plt.text(pos, 0, data[0][-1][pos], fontsize=4, fontproperties=monospaced)
+            plt.text(pos, 0, data[0][-1][pos],
+                     fontsize=4, fontproperties=monospaced)
 
         try:
             axes = p1 + p4 + p7
-        except:
+        except BaseException:
             axes = p1 + p7
 
         legs = [a.get_label() for a in axes]
@@ -1632,14 +2429,16 @@ def plot_walk(data, goal, wdir, logfile, wt_scores=None, highl=[10000], highl_na
         ax.legend(axes, legs, loc=0, prop=font)
         ax.set_ylabel('Score', fontproperties=font)
         plt.xlabel('Mutations', fontproperties=font)
-        plt.title('Comparison of different mutation rates and scores', fontproperties=font)
+        plt.title(
+            'Comparison of different mutation rates and scores',
+            fontproperties=font)
         plt.savefig(os.path.join(wdir, 'means_sub.png'))
         plt.gcf().clear()
         logfile.write('Plotted means.\n')
         logfile.flush()
 
         # aa specific plots:
-        pos = range(len(data))
+        pos = list(range(len(data)))
 
         for aa in aas:
             plt.figure(1, figsize=(f_width, f_height), dpi=res)
@@ -1648,30 +2447,53 @@ def plot_walk(data, goal, wdir, logfile, wt_scores=None, highl=[10000], highl_na
                 pprint.pprint(scores[aa][i], logfile)
                 #  logfile.write('wt_scores\n')
                 #  pprint.pprint(wt_scores, logfile)
-                sub_mean = (np.asarray(scores[aa][i]) - np.asarray(wt_scores[i])).tolist()
+                sub_mean = (
+                    np.asarray(
+                        scores[aa][i]) -
+                    np.asarray(
+                        wt_scores[i])).tolist()
                 #  logfile.write('submean\n')
                 #  pprint.pprint(sub_mean, logfile)
                 #  logfile.write('Pos:\n')
                 #  pprint.pprint(pos, logfile)
                 if i == goal:
-                    p1 = ax.plot(pos, sub_mean, label='Goal', zorder=1000, color='#9D1C20', linewidth=0.25)
+                    p1 = ax.plot(
+                        pos,
+                        sub_mean,
+                        label='Goal',
+                        zorder=1000,
+                        color='#9D1C20',
+                        linewidth=0.25)
                 else:
                     if i in highl:
-                        p4 = ax.plot(pos, sub_mean, label=highl_names[0] + ",\n" + highl_names[1], zorder=999,
-                                     color='#005493', linewidth=0.25)
+                        p4 = ax.plot(
+                            pos,
+                            sub_mean,
+                            label=highl_names[0] +
+                            ",\n" +
+                            highl_names[1],
+                            zorder=999,
+                            color='#005493',
+                            linewidth=0.25)
                     else:
-                        p7 = ax.plot(pos, sub_mean, label='Alt', color='#009193', linewidth=0.25)
+                        p7 = ax.plot(
+                            pos,
+                            sub_mean,
+                            label='Alt',
+                            color='#009193',
+                            linewidth=0.25)
 
             ax.xaxis.set_ticks_position('bottom')
             ax.yaxis.set_ticks_position('left')
             # ax.set_ylim([0, 1.2 * np.max(scores_mean)])
 
             box = ax.get_position()
-            ax.set_position([box.x0, box.y0, box.width * 0.7, box.height * 0.9])
+            ax.set_position(
+                [box.x0, box.y0, box.width * 0.7, box.height * 0.9])
 
             try:
                 axes = p1 + p4 + p7
-            except:
+            except BaseException:
                 axes = p1 + p7
 
             legs = [a.get_label() for a in axes]
@@ -1679,23 +2501,32 @@ def plot_walk(data, goal, wdir, logfile, wt_scores=None, highl=[10000], highl_na
 
             ax.set_ylabel('Score', fontproperties=font)
             plt.xlabel('Mutations', fontproperties=font)
-            plt.title('Comparison of different mutation rates and scores', fontproperties=font)
+            plt.title(
+                'Comparison of different mutation rates and scores',
+                fontproperties=font)
             plt.savefig(os.path.join(wdir, 'means_sub_{}.png'.format(aa)))
             plt.gcf().clear()
             logfile.write('Plottet for {}.\n'.format(aa))
             logfile.flush()
 
-
     logfile.write('Plotted aas.\n')
     logfile.flush()
-
 
     logfile.write('Wrote plots.\n')
     logfile.flush()
 
 
-
-def plot_all_data(data, goal, wdir, logfile, highl=[100000], highl_names=['Default'], f_width=10, f_height=8, res=80, name='data.png'):
+def plot_all_data(
+        data,
+        goal,
+        wdir,
+        logfile,
+        highl=[100000],
+        highl_names=['Default'],
+        f_width=10,
+        f_height=8,
+        res=80,
+        name='data.png'):
     """
         Plots all data from randomize(). x-axis is the number of mutations the sequence has,
             y-axis is the score +/- standard deviation. Highlights the goal score and the highlight scores in different
@@ -1727,28 +2558,64 @@ def plot_all_data(data, goal, wdir, logfile, highl=[100000], highl_names=['Defau
             goal_mean[score].append(datapoint[1][score])
             goal_var[score].append((datapoint[2][score]))
 
-    plt.figure(1, figsize=(f_width, f_height), dpi=res, facecolor='w', edgecolor='k')
+    plt.figure(
+        1,
+        figsize=(
+            f_width,
+            f_height),
+        dpi=res,
+        facecolor='w',
+        edgecolor='k')
     ax = plt.subplot(111)
     # ax2 = ax.twinx()
     for i in range(len(goal_mean)):
         if i == goal:
             lower = np.asarray(goal_mean[i]) + np.asarray(goal_var[i]).tolist()
             upper = np.asarray(goal_mean[i]) - np.asarray(goal_var[i]).tolist()
-            p1 = ax.plot(muts, goal_mean[i], label='Goal', zorder=1000, color='#9D1C20', linewidth=0.25)
+            p1 = ax.plot(
+                muts,
+                goal_mean[i],
+                label='Goal',
+                zorder=1000,
+                color='#9D1C20',
+                linewidth=0.25)
             p2 = ax.plot(muts, lower, label='Goal - sigma', color='#BB5651')
             p3 = ax.plot(muts, upper, label='Goal + sigma', color='#BB5651')
             ax.fill_between(muts, lower, upper, facecolor='#D89F9C')
         else:
             if i in highl:
                 p4 = []
-                lower = np.asarray(goal_mean[i]) + np.asarray(goal_var[i]).tolist()
-                upper = np.asarray(goal_mean[i]) - np.asarray(goal_var[i]).tolist()
-                p4 = ax.plot(muts, goal_mean[i], label=highl_names[0] + ",\n" + highl_names[1], zorder=999, color='#005493', linewidth=0.25)
-                p5 = ax.plot(muts, lower, label='Goal - sigma', color='#6698BE')
-                p6 = ax.plot(muts, upper, label='Goal + sigma', color='#6698BE')
+                lower = np.asarray(goal_mean[i]) + \
+                    np.asarray(goal_var[i]).tolist()
+                upper = np.asarray(goal_mean[i]) - \
+                    np.asarray(goal_var[i]).tolist()
+                p4 = ax.plot(
+                    muts,
+                    goal_mean[i],
+                    label=highl_names[0] +
+                    ",\n" +
+                    highl_names[1],
+                    zorder=999,
+                    color='#005493',
+                    linewidth=0.25)
+                p5 = ax.plot(
+                    muts,
+                    lower,
+                    label='Goal - sigma',
+                    color='#6698BE')
+                p6 = ax.plot(
+                    muts,
+                    upper,
+                    label='Goal + sigma',
+                    color='#6698BE')
                 ax.fill_between(muts, lower, upper, facecolor='#B2CBDD')
             else:
-                p7 = ax.plot(muts, goal_mean[i], label='Alt', color='#009193', linewidth=0.25)
+                p7 = ax.plot(
+                    muts,
+                    goal_mean[i],
+                    label='Alt',
+                    color='#009193',
+                    linewidth=0.25)
                 # p8 = ax.plot(muts, lower, label='Goal - sigma', color='#66BDBE')
                 # p9 = ax.plot(muts, upper, label='Goal + sigma', color='#66BDBE')
                 # ax.fill_between(muts, lower, upper, facecolor='#B3DEDE')
@@ -1759,7 +2626,7 @@ def plot_all_data(data, goal, wdir, logfile, highl=[100000], highl_names=['Defau
 
     box = ax.get_position()
     # ax.set_position([box.x0, box.y0, box.width, box.height])
-    ax.set_position([box.x0, box.y0, box.width*0.7, box.height*0.9])
+    ax.set_position([box.x0, box.y0, box.width * 0.7, box.height * 0.9])
 
     axes = p1 + p4 + p7
     legs = [a.get_label() for a in axes]
@@ -1769,14 +2636,23 @@ def plot_all_data(data, goal, wdir, logfile, highl=[100000], highl_names=['Defau
     # plt.gcf().text(0.8, 0.2, 'Generation: {}'.format(len(self.mutated) - 1))
     ax.set_ylabel('Score', fontproperties=font)
     plt.xlabel('Mutations', fontproperties=font)
-    plt.title('Comparison of different mutation rates and scores', fontproperties=font)
+    plt.title(
+        'Comparison of different mutation rates and scores',
+        fontproperties=font)
     plt.savefig(os.path.join(wdir, name))
     plt.gcf().clear()
     logfile.write('Wrote plots.\n')
     logfile.flush()
 
 
-def plot_data(data, wdir, logfile, f_width=10, f_height=8, res=80, name='data.png'):
+def plot_data(
+        data,
+        wdir,
+        logfile,
+        f_width=10,
+        f_height=8,
+        res=80,
+        name='data.png'):
     """
     Plots data from randomize(). x-axis is the number of mutations the sequence has,
         y-axis is the score +/- standard deviation. Only plots the goal class with mean score and standard deviation
@@ -1814,7 +2690,14 @@ def plot_data(data, wdir, logfile, f_width=10, f_height=8, res=80, name='data.pn
         avoid_var_mean.append(datapoint[7])
         avoid_var_var.append(datapoint[8])
 
-    plt.figure(1, figsize=(f_width, f_height), dpi=res, facecolor='w', edgecolor='k')
+    plt.figure(
+        1,
+        figsize=(
+            f_width,
+            f_height),
+        dpi=res,
+        facecolor='w',
+        edgecolor='k')
     ax = plt.subplot(111)
     ax2 = ax.twinx()
     p1 = ax.plot(muts, goal_mean, label='Goal', zorder=1, color='#005493')

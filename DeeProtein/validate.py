@@ -1,8 +1,8 @@
 """ Invoke the Model in validation mode and perform a run over the valid set."""
 import argparse
 import json
-from DeeProtein import DeeProtein
-import helpers
+from .DeeProtein import DeeProtein
+from . import helpers
 
 
 def main():
@@ -17,6 +17,7 @@ def main():
     optionhandler = helpers.OptionHandler(config_dict)
     model = DeeProtein(optionhandler)
     model.validate()
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -33,6 +34,6 @@ if __name__ == '__main__':
              '(optional). Defaults to True.')
     FLAGS, unparsed = parser.parse_known_args()
     if unparsed:
-        print('Error, unrecognized flags:', unparsed)
+        print(('Error, unrecognized flags:', unparsed))
         exit(-1)
     main()

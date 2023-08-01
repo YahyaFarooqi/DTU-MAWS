@@ -11,6 +11,7 @@ import pprint
 import predcel_plot as plot_predcel
 import predcel_calc as calc_predcel
 
+
 def main():
     config_json = sys.argv[1]
     with open(config_json) as config_fobj:
@@ -28,7 +29,12 @@ def main():
     else:
         calc_predcel.setup(o, v, logfile)
 
-    plot_predcel.plot(o, v, suffix='skew', prefix='', summariesdir=summariesdir)
+    plot_predcel.plot(
+        o,
+        v,
+        suffix='skew',
+        prefix='',
+        summariesdir=summariesdir)
     open(os.path.join(summariesdir, 'config.json'), 'w').write(
         open(sys.argv[1], 'r').read())
     print('Done.')

@@ -2,11 +2,12 @@ import sys
 import os
 import pickle
 
-import gaia as gaia
+from . import gaia as gaia
 
 
 def main():
-    os.environ['MPLCONFIGDIR'] = "." # set this to something reasonable not mounted
+    # set this to something reasonable not mounted
+    os.environ['MPLCONFIGDIR'] = "."
     """sys.argv[1] is the summariesdir, where gaia wrote the data."""
 
     # save all used scripts to the summaries dir
@@ -22,18 +23,30 @@ def main():
 
     with open(os.path.join(summaries_dir, 'wt_scores.p'), 'rb') as pfile:
         wtscores = pickle.load(pfile)
-    gaia.plot_walk(data=data,
-                   goal=174,
-                   wdir=summaries_dir,
-                   logfile=open(os.path.join(summaries_dir, 'plot_walk_logfile.txt'), 'w'),
-                   wt_scores=wtscores,
-                   highl=[175, 154],
-                   highl_names=['GO:0004818', 'GO:0004827'],
-                   aas = range(20),
-                   f_width=5,
-                   f_height=4,
-                   res=300, name='walk_data_HD.png')
+    gaia.plot_walk(
+        data=data,
+        goal=174,
+        wdir=summaries_dir,
+        logfile=open(
+            os.path.join(
+                summaries_dir,
+                'plot_walk_logfile.txt'),
+            'w'),
+        wt_scores=wtscores,
+        highl=[
+            175,
+            154],
+        highl_names=[
+            'GO:0004818',
+            'GO:0004827'],
+        aas=list(
+            range(20)),
+        f_width=5,
+        f_height=4,
+        res=300,
+        name='walk_data_HD.png')
     return
+
 
 if __name__ == '__main__':
     main()

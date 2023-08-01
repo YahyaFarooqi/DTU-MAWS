@@ -4,19 +4,19 @@ Walks gaia: predicts a score for every possible single mutant of a sequence.
 import json
 import os
 
-from DeeProtein import DeeProtein
-import helpers as helpers
-from gaia import GeneticAlg
+from .DeeProtein import DeeProtein
+from . import helpers as helpers
+from .gaia import GeneticAlg
 
 
 def main():
-    #load the config_json into the optionhandler object
+    # load the config_json into the optionhandler object
     config_json = FLAGS.config_json
     with open(config_json) as config_fobj:
         config_dict = json.load(config_fobj)
     optionhandler = helpers.OptionHandler(config_dict)
 
-    #Handle the summaries_dir output directory
+    # Handle the summaries_dir output directory
     summaries_dir = optionhandler._summariesdir
     if FLAGS.output_dir:
         summaries_dir = FLAGS.output_dir
@@ -25,16 +25,20 @@ def main():
     if not os.path.exists(os.path.join(summaries_dir, 'scripts')):
         os.mkdir(os.path.join(summaries_dir, 'scripts'))
 
-    #Enable overwriting the sequence path
+    # Enable overwriting the sequence path
     if FLAGS.sequence:
         optionhandler.seqfile = FLAGS.sequence
 
-    optionhandler._batchsize = 20 #20 = number of aa's
+    optionhandler._batchsize = 20  # 20 = number of aa's
     classifier = DeeProtein(optionhandler)
     classifier.init_for_machine_infer(optionhandler._batchsize)
 
-    evolver = GeneticAlg(optionhandler, classifier, helpers.TFrecords_generator(optionhandler))
+    evolver = GeneticAlg(
+        optionhandler,
+        classifier,
+        helpers.TFrecords_generator(optionhandler))
     evolver.walk()
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -68,6 +72,6 @@ if __name__ == '__main__':
         help='Path to the directory for the output. Overwrites the summaries_dir given in the config JSON.')
     FLAGS, unparsed = parser.parse_known_args()
     if unparsed:
-        print('Error, unrecognized flags:', unparsed)
+        print(('Error, unrecognized flags:', unparsed))
         exit(-1)
     main()

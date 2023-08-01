@@ -40,13 +40,17 @@ class DatasetGenerator():
       filter_AA: `bool` whether to filter for non-canonical AAs or not.
       train_dataset_csv_path: `str` dir where to store the final datasets.
     """
+
     def __init__(self, uniprot_file_path, csv_file_path, save_dir, mode='EC'):
-        self.depth = 4 #specifies the depth of labels to consider
+        self.depth = 4  # specifies the depth of labels to consider
         self.mode = mode
-        self.GODag = GODag('/net/data.isilon/igem/2017/data/gene_ontology/go.obo', optional_attrs=['relationship'])
-        self.max_depth = 4 #max_depth in goDAG to consider
-        self.max_write = 1000000 #specify the max amount of labels to be written for one class:
-        self.write_count = 0 #counter to see how much we already worte
+        self.GODag = GODag(
+            '/net/data.isilon/igem/2017/data/gene_ontology/go.obo',
+            optional_attrs=['relationship'])
+        self.max_depth = 4  # max_depth in goDAG to consider
+        # specify the max amount of labels to be written for one class:
+        self.max_write = 1000000
+        self.write_count = 0  # counter to see how much we already worte
         self.save_dir = save_dir
         self.uniprot_csv = csv_file_path
         self.uniprot_file_path = uniprot_file_path
@@ -62,14 +66,14 @@ class DatasetGenerator():
         try:
             with open(os.path.join(self.save_dir, 'csv_by_EC', os.path.join(
                     'class2id_{}.p'.format(self.mode))),
-                      "rb") as pickle_f:
+                    "rb") as pickle_f:
                 self.class_to_id_EC = pickle.load(pickle_f)
                 # freeze the default dict
                 self.class_to_id_EC.default_factory = None
                 print('Loaded EC-class dict.')
         except OSError:
             print('Failed to load EC-class dict. Generating EC-class dict.')
-            #self.separate_classes_by_EC()
+            # self.separate_classes_by_EC()
 
     def _simple_fileparser(self, in_fobj):
         """A fileparser yielding the lines.
@@ -104,9 +108,9 @@ class DatasetGenerator():
             name = fields[0]
             # str to list
             seq = fields[4]
-            go_str = re.sub('[\'\[\]]', '', fields[5])
+            go_str = re.sub('[\'\\[\\]]', '', fields[5])
             GO = go_str.split(',')
-            EC_str = re.sub('[\'\[\],]', '', fields[6])
+            EC_str = re.sub('[\'\\[\\],]', '', fields[6])
             EC = EC_str.split()
             structure_str = fields[9]
             yield name, seq, GO, EC, structure_str
@@ -122,8 +126,12 @@ class DatasetGenerator():
         After each entry the information is written, to avoid a memory explosion.
         """
         uniprot_dict = {}
-        uniprot_csv_path = os.path.join(self.save_dir, 'swissprot_{}.csv'.format(self.mode))
-        uniprot_pickle_path = os.path.join(self.save_dir, 'swissprot_{}.p'.format(self.mode))
+        uniprot_csv_path = os.path.join(
+            self.save_dir,
+            'swissprot_{}.csv'.format(
+                self.mode))
+        uniprot_pickle_path = os.path.join(
+            self.save_dir, 'swissprot_{}.p'.format(self.mode))
         out_csv = open(uniprot_csv_path, 'a')
         with open(self.uniprot_file_path, "r") as in_fobj:
             curr_prot_id = ''
@@ -145,7 +153,8 @@ class DatasetGenerator():
                     if ec_nr:
                         curr_ECs.append(ec_nr.group(1))
                     elif rec_name:
-                        uniprot_dict[curr_prot_id]['rec_name'] = rec_name.group(1)
+                        uniprot_dict[curr_prot_id]['rec_name'] = rec_name.group(
+                            1)
                 elif flag == 'DR' and len(fields) >= 2:
                     '''
                     abfrage fuer GOS und PFAM
@@ -195,11 +204,14 @@ class DatasetGenerator():
                 elif flag == 'SQ' and len(fields) >= 2:
                     seq = True
                     uniprot_dict[curr_prot_id]['seq'] = ''
-                elif seq == True:
+                elif seq:
                     if flag == '//':
-                        uniprot_dict[curr_prot_id]['F_GO'] = self._full_annotation(curr_F_GOs)
-                        uniprot_dict[curr_prot_id]['P_GO'] = self._full_annotation(curr_P_GOs)
-                        uniprot_dict[curr_prot_id]['C_GO'] = self._full_annotation(curr_C_GOs)
+                        uniprot_dict[curr_prot_id]['F_GO'] = self._full_annotation(
+                            curr_F_GOs)
+                        uniprot_dict[curr_prot_id]['P_GO'] = self._full_annotation(
+                            curr_P_GOs)
+                        uniprot_dict[curr_prot_id]['C_GO'] = self._full_annotation(
+                            curr_C_GOs)
                         uniprot_dict[curr_prot_id]['EC'] = curr_ECs
                         uniprot_dict[curr_prot_id]['Structure'] = curr_structure
                         curr_prot_id = ''
@@ -212,9 +224,15 @@ class DatasetGenerator():
                         curr_structure = []
 
                         # write the entry to file
-                        uniprot_df = pd.DataFrame.from_dict(uniprot_dict, orient='index')
-                        uniprot_df.to_csv(out_csv, sep=';', na_rep='', header=False, index=True,
-                                          line_terminator='\n')
+                        uniprot_df = pd.DataFrame.from_dict(
+                            uniprot_dict, orient='index')
+                        uniprot_df.to_csv(
+                            out_csv,
+                            sep=';',
+                            na_rep='',
+                            header=False,
+                            index=True,
+                            line_terminator='\n')
                         uniprot_dict = {}
                     else:
                         uniprot_dict[curr_prot_id]['seq'] += ''.join(fields)
@@ -234,7 +252,10 @@ class DatasetGenerator():
         larger files (exceeding a few GB).
         """
         uniprot_dict = {}
-        uniprot_csv_path = os.path.join(self.save_dir, 'uniprot_prefiltered_{}.csv'.format(self.mode))
+        uniprot_csv_path = os.path.join(
+            self.save_dir,
+            'uniprot_prefiltered_{}.csv'.format(
+                self.mode))
         #uniprot_pickle_path = os.path.join(self.save_dir, '_{}.p'.format(self.mode))
         with open(self.uniprot_file_path, "r") as in_fobj:
             curr_prot_id = ''
@@ -256,7 +277,8 @@ class DatasetGenerator():
                     if ec_nr:
                         curr_ECs.append(ec_nr.group(1))
                     elif rec_name:
-                        uniprot_dict[curr_prot_id]['rec_name'] = rec_name.group(1)
+                        uniprot_dict[curr_prot_id]['rec_name'] = rec_name.group(
+                            1)
                 elif flag == 'DR' and len(fields) >= 2:
                     '''
                     abfrage fuer GOS und PFAM
@@ -306,11 +328,14 @@ class DatasetGenerator():
                 elif flag == 'SQ' and len(fields) >= 2:
                     seq = True
                     uniprot_dict[curr_prot_id]['seq'] = ''
-                elif seq == True:
+                elif seq:
                     if flag == '//':
-                        uniprot_dict[curr_prot_id]['F_GO'] = self._full_annotation(curr_F_GOs)
-                        uniprot_dict[curr_prot_id]['P_GO'] = self._full_annotation(curr_P_GOs)
-                        uniprot_dict[curr_prot_id]['C_GO'] = self._full_annotation(curr_C_GOs)
+                        uniprot_dict[curr_prot_id]['F_GO'] = self._full_annotation(
+                            curr_F_GOs)
+                        uniprot_dict[curr_prot_id]['P_GO'] = self._full_annotation(
+                            curr_P_GOs)
+                        uniprot_dict[curr_prot_id]['C_GO'] = self._full_annotation(
+                            curr_C_GOs)
                         uniprot_dict[curr_prot_id]['EC'] = curr_ECs
                         uniprot_dict[curr_prot_id]['Structure'] = curr_structure
                         curr_prot_id = ''
@@ -326,12 +351,17 @@ class DatasetGenerator():
                 else:
                     pass
             uniprot_df = pd.DataFrame.from_dict(uniprot_dict, orient='index')
-            for key in uniprot_dict.keys():
+            for key in list(uniprot_dict.keys()):
                 uniprot_dict.pop(key)
 
-            uniprot_df.to_csv(uniprot_csv_path, sep=';', na_rep='', header=True, index=True,
-                              line_terminator='\n')
-            #uniprot_df.to_pickle(uniprot_pickle_path)
+            uniprot_df.to_csv(
+                uniprot_csv_path,
+                sep=';',
+                na_rep='',
+                header=True,
+                index=True,
+                line_terminator='\n')
+            # uniprot_df.to_pickle(uniprot_pickle_path)
 
     def _full_annotation(self, GO_terms):
         """Takes a list of GO_terms and expands them to full annotation.
@@ -348,12 +378,14 @@ class DatasetGenerator():
         omitted_GOs = []
 
         for go in GO_terms:
-            # determine if a node has parents and retrieve the set of parent-nodes
+            # determine if a node has parents and retrieve the set of
+            # parent-nodes
             try:
                 full_go.update(self.GODag[go].get_all_parents())
                 full_go.add(go)
             except KeyError:
-                # this means the term might be obsolete as its not in the DAG. store it
+                # this means the term might be obsolete as its not in the DAG.
+                # store it
                 omitted_GOs.append(go)
                 pass
 
@@ -373,7 +405,8 @@ class DatasetGenerator():
         """
         helper_GO_to_id = {}
         # generate extra folder in savedir to store the single files in
-        csv_by_GO_path = os.path.join(self.save_dir, 'csv_by_GO_structure_splitted')
+        csv_by_GO_path = os.path.join(
+            self.save_dir, 'csv_by_GO_structure_splitted')
         # get a GO-dict to store the population of all GO-terms we have. Dict is flat and not lvl wise (as wen do not
         # need to reconstruct the DAG.
         self.GO_population_dict = {}
@@ -381,33 +414,41 @@ class DatasetGenerator():
         omitted_GOs = []
 
         # set up a GOdag for molecular function only: stored in self.GODag
-        # got through the uniprot csv once and set up a dict of all GO-terms. Pass an ID
+        # got through the uniprot csv once and set up a dict of all GO-terms.
+        # Pass an ID
         with open(self.uniprot_csv, "r") as in_fobj:
             in_fobj.readline()
-            for name, seq, GO_terms, EC_nrs, structure_str in self._uniprot_csv_parser(in_fobj):
-                # iterate through the whole GO annotation and complete it by checking for parents in the DAG
+            for name, seq, GO_terms, EC_nrs, structure_str in self._uniprot_csv_parser(
+                    in_fobj):
+                # iterate through the whole GO annotation and complete it by
+                # checking for parents in the DAG
                 if self._valid_seq(seq):
                     full_go = set()
-                    #if __name__ == '__main__':
+                    # if __name__ == '__main__':
                     for go in GO_terms:
-                        # determine if a node has parents and retrieve the set of parent-nodes
+                        # determine if a node has parents and retrieve the set
+                        # of parent-nodes
                         try:
                             full_go.update(self.GODag[go].get_all_parents())
                             full_go.add(go)
                         except KeyError:
                             print(go)
-                            # this means the term might be obsolete as its not in the DAG. store it
+                            # this means the term might be obsolete as its not
+                            # in the DAG. store it
                             omitted_GOs.append((name, go))
                             pass
 
                     # sort the full annotation by levels:
                     full_go_by_level = {}
-                    levels = set([self.GODag[go].level for go in list(full_go)])
+                    levels = set(
+                        [self.GODag[go].level for go in list(full_go)])
                     for lvl in sorted(list(levels)):
-                        full_go_by_level[lvl] = [go for go in list(full_go) if self.GODag[go].level == lvl]
+                        full_go_by_level[lvl] = [
+                            go for go in list(full_go) if self.GODag[go].level == lvl]
 
-                    for lvl, go_terms in full_go_by_level.items():
-                        # open the corresponding csvs and add the line from the uniprot csv.
+                    for lvl, go_terms in list(full_go_by_level.items()):
+                        # open the corresponding csvs and add the line from the
+                        # uniprot csv.
                         for go_term in go_terms:
                             # update the counters for the population dict
                             try:
@@ -415,9 +456,9 @@ class DatasetGenerator():
                             except KeyError:
                                 self.GO_population_dict[go_term] = 1
 
-                            with open(os.path.join(csv_by_GO_path, '%d_%s.csv_%s' % (lvl, go_term, jobnr)),"a") as go_csv:
-                                line = ";".join([name, seq, ','.join(list(full_go)), ','.join(go_terms),
-                                                 go_term, str(lvl), structure_str])
+                            with open(os.path.join(csv_by_GO_path, '%d_%s.csv_%s' % (lvl, go_term, jobnr)), "a") as go_csv:
+                                line = ";".join([name, seq, ','.join(list(full_go)), ','.join(
+                                    go_terms), go_term, str(lvl), structure_str])
                                 line += '\n'
                                 go_csv.write(line)
         print(omitted_GOs)
@@ -452,15 +493,17 @@ class DatasetGenerator():
                 F_GO = fields[5].split(',') if ',' in fields[5] else fields[5]
                 P_GO = fields[6].split(',') if ',' in fields[5] else fields[6]
                 C_GO = fields[7].split(',') if ',' in fields[5] else fields[5]
-                EC_str = re.sub('[\'\[\],]', '', fields[8])
+                EC_str = re.sub('[\'\\[\\],]', '', fields[8])
                 EC = EC_str.split()
                 yield name, seq, F_GO, P_GO, C_GO, EC
 
         with open(self.uniprot_csv, "r") as uniprot_csv_obj, \
                 open(out_file_path, "w") as out_fobj, \
                 open(out_file_names_only_path, "w") as out_fobj_names_only:
-            for name, seq, F_GO, P_GO, C_GO, EC in uniprot_csv_parser(uniprot_csv_obj):
-                # now iterate over all GO_terms and check if we match a term of the List:
+            for name, seq, F_GO, P_GO, C_GO, EC in uniprot_csv_parser(
+                    uniprot_csv_obj):
+                # now iterate over all GO_terms and check if we match a term of
+                # the List:
                 annotated_GOs = set(F_GO)
                 annotated_GOs.update(P_GO)
                 annotated_GOs.update(C_GO)
@@ -472,7 +515,7 @@ class DatasetGenerator():
                     line = [name, seq, f, p, c, ec]
                     line += '\n'
                     out_fobj.write(';'.join(line))
-                    out_fobj_names_only.write(name+'\n')
+                    out_fobj_names_only.write(name + '\n')
 
     def filter_FASTA_for_names(self, fasta_file_path, names_file):
         """Extract FASTA entries from a .fasta file by their protein name.
@@ -487,12 +530,13 @@ class DatasetGenerator():
                 names_list.append(line.strip())
 
         assert os.path.exists(fasta_file_path)
-        out_path = fasta_file_path + '.filtered_%s' % os.path.basename(names_file).split('.')[0]
+        out_path = fasta_file_path + \
+            '.filtered_%s' % os.path.basename(names_file).split('.')[0]
 
         with open(fasta_file_path, "r") as in_fasta, open(out_path, "w") as out_fasta:
             curr_entry = []
             for line in in_fasta:
-                if line.startswith('>'): #header line
+                if line.startswith('>'):  # header line
                     if curr_entry:
                         out_fasta.write(''.join(curr_entry))
                         curr_entry = []
@@ -500,13 +544,13 @@ class DatasetGenerator():
                     name = fields[2].split()[0]
                     if name in names_list:
                         curr_entry.append(line)
-                else: #sequence
-                    if curr_entry: # = if curr_entry != []
+                else:  # sequence
+                    if curr_entry:  # = if curr_entry != []
                         curr_entry.append(line)
                     else:
                         pass
             # write the last entry:
-            if curr_entry: # = if curr_entry != []
+            if curr_entry:  # = if curr_entry != []
                 out_fasta.write(''.join(curr_entry))
 
     def FASTA_to_dict(self, fasta_file_path):
@@ -523,7 +567,8 @@ class DatasetGenerator():
         with open(fasta_file_path, "r") as in_fasta, open(out_path, "w") as out_fasta:
 
             for line in in_fasta:
-                if line.startswith('>'): #header line, those are the interesting ones
+                if line.startswith(
+                        '>'):  # header line, those are the interesting ones
                     # >sp|C0JAU1|A1H2_LOXSP Phospholipase D LspaSicTox-alphaIA1ii (Fragment) OS=Loxosceles spadicea PE=2 SV=1
                     fields = line.strip().split('|')
                     sp_id = fields[1]
@@ -556,33 +601,40 @@ class DatasetGenerator():
             print(csv_by_EC_path)
             os.makedirs(csv_by_EC_path)
 
-        #go through the csv once and set up a stratified dict for each class!
+        # go through the csv once and set up a stratified dict for each class!
         with open(self.uniprot_csv, "r") as in_fobj:
             in_fobj.readline()
             for name, seq, GO, EC_nrs in self._uniprot_csv_parser(in_fobj):
-                # TODO: to this point we exclude all protein with multiple EC numbers
+                # TODO: to this point we exclude all protein with multiple EC
+                # numbers
                 if len(set(EC_nrs)) == 1:
                     EC_nr = EC_nrs[0].split('.')
                     helper_EC_to_id[EC_nrs[0]] = len(helper_EC_to_id)
 
                     for key, value in [('ID', helper_EC_to_id[EC_nrs[0]]),
                                        ('path', '%s.csv' % EC_nrs[0])]:
-                        self.class_to_id_EC[EC_nr[0]][EC_nr[1]][EC_nr[2]][EC_nr[3]][key] = value
+                        self.class_to_id_EC[EC_nr[0]][EC_nr[1]
+                                                      ][EC_nr[2]][EC_nr[3]][key] = value
                     try:
-                        self.class_to_id_EC[EC_nr[0]][EC_nr[1]][EC_nr[2]][EC_nr[3]]['count'] += 1
+                        self.class_to_id_EC[EC_nr[0]][EC_nr[1]
+                                                      ][EC_nr[2]][EC_nr[3]]['count'] += 1
                     except TypeError:
-                        self.class_to_id_EC[EC_nr[0]][EC_nr[1]][EC_nr[2]][EC_nr[3]]['count'] = 1
+                        self.class_to_id_EC[EC_nr[0]][EC_nr[1]
+                                                      ][EC_nr[2]][EC_nr[3]]['count'] = 1
 
                     with open(os.path.join(csv_by_EC_path,
                                            self.class_to_id_EC[EC_nr[0]][EC_nr[1]][EC_nr[2]][EC_nr[3]]['path']),
                               "a") as out_fobj:
-                        line = ";".join([name, seq, ','.join(GO),
-                                         EC_nrs[0], str(helper_EC_to_id[EC_nrs[0]])])
+                        line = ";".join([name, seq, ','.join(
+                            GO), EC_nrs[0], str(helper_EC_to_id[EC_nrs[0]])])
                         line += '\n'
                         out_fobj.write(line)
 
         with open(os.path.join(csv_by_EC_path, 'class2id_EC.p'), "wb") as out_fobj:
-            pickle.dump(self.class_to_id_EC, out_fobj, protocol=pickle.HIGHEST_PROTOCOL)
+            pickle.dump(
+                self.class_to_id_EC,
+                out_fobj,
+                protocol=pickle.HIGHEST_PROTOCOL)
 
     def _valid_seq(self, seq):
         """Check a sequence for forbidden AAs and minlength.
@@ -608,6 +660,7 @@ class DatasetGenerator():
                 return True
         else:
             return False
+
 
 def _filter_and_write(self, line, out_fobj, EC_to_write=False):
     """
@@ -647,13 +700,15 @@ def _filter_and_write(self, line, out_fobj, EC_to_write=False):
                 out_fobj.flush()
                 self.write_count += 1
 
+
 def filter_count_and_write_all(self):
     """Takes the directory to the EC/GO class files and filters every file.
 
     Filters for minlength and non-canonical AAs. Every file in the directory is filered and the filtered files
     are saved in a new folder in the self.save_dir.
     """
-    csv_by_EC_path_outdir = os.path.join(self.save_dir, 'csv_by_GO_structure_filtered')
+    csv_by_EC_path_outdir = os.path.join(
+        self.save_dir, 'csv_by_GO_structure_filtered')
     csv_by_EC_path = os.path.join(self.save_dir, 'csv_by_GO_structure')
 
     if not os.path.exists(csv_by_EC_path_outdir):
@@ -682,6 +737,7 @@ def filter_count_and_write_all(self):
                         pass
         self.write_count = 0
 
+
 def generate_dataset_by_GO_list(self, GO_file):
     """Generate the train and validsets from a given GO-File.
     Generate a dataset from the passed list of GO_terms. Sequences are included only once, even though they might
@@ -699,11 +755,12 @@ def generate_dataset_by_GO_list(self, GO_file):
     # check which EC-classes we need to consider:
     GO_list = []
     with open(GO_file, "r") as in_fobj:
-        print('Building dataset for: %s' % GO_file)
+        print(('Building dataset for: %s' % GO_file))
         for line in in_fobj:
-            print(line.strip())
+            print((line.strip()))
             fields = line.strip().split()
-            GO_list.append(fields[1]) # is the EC class, fields[0] is the count
+            # is the EC class, fields[0] is the count
+            GO_list.append(fields[1])
 
     # construct a dict by lvl:
     GO_dict = {}
@@ -711,16 +768,22 @@ def generate_dataset_by_GO_list(self, GO_file):
     # determine the lvls in the GO_list:
     lvls = set()
     for go_csv in GO_list:
-        lvl = go_csv.split('_')[0] # to prevent 1 matching 10 etc
+        lvl = go_csv.split('_')[0]  # to prevent 1 matching 10 etc
         lvls.update([lvl])
     for lvl in lvls:
-        GO_dict[lvl] = [go_csv for go_csv in GO_list if go_csv.startswith(lvl + '_')]
+        GO_dict[lvl] = [
+            go_csv for go_csv in GO_list if go_csv.startswith(
+                lvl + '_')]
 
-    print(GO_dict.items())
+    print((list(GO_dict.items())))
 
     del lvls
 
-    dataset_dir = os.path.join(dataset_dir, 'dataset_{size}'.format(size=str(len(GO_list))))
+    dataset_dir = os.path.join(
+        dataset_dir,
+        'dataset_{size}'.format(
+            size=str(
+                len(GO_list))))
     if __name__ == '__main__':
         if not os.path.exists(dataset_dir):
             os.makedirs(dataset_dir)
@@ -728,25 +791,41 @@ def generate_dataset_by_GO_list(self, GO_file):
     # To construct the dataset and avoid double representation of the sequences, we iterate over the Go terms by
     # level. For each lvl we construct sets of sequences, then pick sequences to be considered in the valid set
     # then fuse the sets to the dataset
-    self.train_dataset_csv_path = os.path.join(dataset_dir, 'dataset_{size}_TRAIN.csv'.format(size=str(len(GO_list))))
-    self.valid_dataset_csv_path = os.path.join(dataset_dir, 'dataset_{size}_VALID.csv'.format(size=str(len(GO_list))))
+    self.train_dataset_csv_path = os.path.join(
+        dataset_dir,
+        'dataset_{size}_TRAIN.csv'.format(
+            size=str(
+                len(GO_list))))
+    self.valid_dataset_csv_path = os.path.join(
+        dataset_dir,
+        'dataset_{size}_VALID.csv'.format(
+            size=str(
+                len(GO_list))))
 
     with open(self.train_dataset_csv_path, "w") as train_dataset_fobj, open(self.valid_dataset_csv_path, "w") as valid_dataset_fobj:
         # open a set() for train and one for valid()
         valid_names = set()
         train_names = set()
 
-        #now sort the GO_list by level
-        for lvl in sorted(GO_dict.keys(), reverse=True):
-            #we have the .csvs listed, thats why we define a list of terms that we'll consider
-            considered_terms = [go.split('_')[1].strip('.csv') for go in GO_list]
+        # now sort the GO_list by level
+        for lvl in sorted(list(GO_dict.keys()), reverse=True):
+            # we have the .csvs listed, thats why we define a list of terms
+            # that we'll consider
+            considered_terms = [
+                go.split('_')[1].strip('.csv') for go in GO_list]
             for go_csv in GO_dict[lvl]:
                 #path = os.path.join(os.path.join(self.save_dir, 'csv_by_GO_structure_filtered'), 'filtered175.%s' % go_csv)
-                path = os.path.join(os.path.join(self.save_dir, 'csv_by_GO_structure'), '%s' % go_csv)
+                path = os.path.join(
+                    os.path.join(
+                        self.save_dir,
+                        'csv_by_GO_structure'),
+                    '%s' %
+                    go_csv)
                 with open(path, "r") as in_csv:
                     lines = []
                     for line in in_csv:
-                        # now discard the GO-terms that are irrelevant (e.g. not in the GO_dict)
+                        # now discard the GO-terms that are irrelevant (e.g.
+                        # not in the GO_dict)
                         fields = line.strip().split(';')
                         gos = fields[2].split(',')
                         name = fields[0]
@@ -755,7 +834,8 @@ def generate_dataset_by_GO_list(self, GO_file):
                             if go in considered_terms:
                                 relevant_gos.append(go)
                         # construct a new line and append it to a list:
-                        fields_to_write = [fields[0], fields[1], ','.join(relevant_gos), fields[6]]
+                        fields_to_write = [
+                            fields[0], fields[1], ','.join(relevant_gos), fields[6]]
                         line = ';'.join(fields_to_write) + '\n'
                         lines.append(line)
 
@@ -769,24 +849,26 @@ def generate_dataset_by_GO_list(self, GO_file):
                         for _ in range(5):
                             index_found = False
                             while not index_found:
-                                random_idx = random.randint(0, len(lines)-1)
+                                random_idx = random.randint(0, len(lines) - 1)
                                 if random_idx not in random_idxs:
                                     random_idxs.append(random_idx)
-                                    # now store these in valid_set() and save their names
+                                    # now store these in valid_set() and save
+                                    # their names
                                     line = lines[random_idx]
                                     name = line.strip().split(';')[0]
                                     if name not in valid_names:
                                         index_found = True
-                                        #valid_set.update([line])
+                                        # valid_set.update([line])
                                         valid_names.update([name])
                                         valid_dataset_fobj.write(line)
 
-                        # write the lines to train where the name dies not match the
+                        # write the lines to train where the name dies not
+                        # match the
                         for _ in range(self.max_write):
                             wrote_line = False
                             while not wrote_line:
-                                if lines: # assert that lines not empty
-                                    length = len(lines)-1
+                                if lines:  # assert that lines not empty
+                                    length = len(lines) - 1
                                     idx_to_write = random.randint(0, length)
                                     line = lines[idx_to_write]
                                     name = line.strip().split(";")[0]
@@ -802,8 +884,9 @@ def generate_dataset_by_GO_list(self, GO_file):
                                 else:
                                     break
 
-                        print('Omitted %d lines from %s.\n' % (len(lines), go_csv))
-                        del lines #delete the rest
+                        print(('Omitted %d lines from %s.\n' %
+                              (len(lines), go_csv)))
+                        del lines  # delete the rest
 
                         train_dataset_fobj.flush()
                         valid_dataset_fobj.flush()
@@ -827,18 +910,31 @@ def generate_dataset_by_EC_list(self, EC_file, path_to_EC_saves):
     # check which EC-classes we need to consider:
     EC_list = []
     with open(EC_file, "r") as in_fobj:
-        print('Building dataset for: %s' % EC_file)
+        print(('Building dataset for: %s' % EC_file))
         for line in in_fobj:
-            print(line.strip())
+            print((line.strip()))
             fields = line.strip().split()
-            EC_list.append(fields[1]) # is the EC class, fields[0] is the count
+            # is the EC class, fields[0] is the count
+            EC_list.append(fields[1])
 
-    dataset_dir = os.path.join(dataset_dir, 'dataset_{size}'.format(size=str(len(EC_list))))
+    dataset_dir = os.path.join(
+        dataset_dir,
+        'dataset_{size}'.format(
+            size=str(
+                len(EC_list))))
     if not os.path.exists(dataset_dir):
         os.makedirs(dataset_dir)
 
-    self.train_dataset_csv_path = os.path.join(dataset_dir, 'dataset_{size}_TRAIN.csv'.format(size=str(len(EC_list))))
-    self.valid_dataset_csv_path = os.path.join(dataset_dir, 'dataset_{size}_VALID.csv'.format(size=str(len(EC_list))))
+    self.train_dataset_csv_path = os.path.join(
+        dataset_dir,
+        'dataset_{size}_TRAIN.csv'.format(
+            size=str(
+                len(EC_list))))
+    self.valid_dataset_csv_path = os.path.join(
+        dataset_dir,
+        'dataset_{size}_VALID.csv'.format(
+            size=str(
+                len(EC_list))))
 
     with open(self.train_dataset_csv_path, "w") as train_dataset_fobj, open(self.valid_dataset_csv_path, "w") as valid_dataset_fobj:
         count = 0
@@ -853,8 +949,10 @@ def generate_dataset_by_EC_list(self, EC_file, path_to_EC_saves):
                     line_nr = 0
                     for line in ec_fobj:
                         line_nr += 1
-                        if line_nr <=5:
-                            #self._filter_and_write(line, train_dataset_fobj, ec_to_write=ec) # set the terms to filter in __init__
+                        if line_nr <= 5:
+                            # self._filter_and_write(line, train_dataset_fobj,
+                            # ec_to_write=ec) # set the terms to filter in
+                            # __init__
                             valid_dataset_fobj.write(line)
                         else:
                             if write_count <= self.max_write:
@@ -873,7 +971,7 @@ def generate_dataset_by_EC_list(self, EC_file, path_to_EC_saves):
                             line = ';'.join(fields)
                             line += '\n'
 
-                            if line_nr <=5:
+                            if line_nr <= 5:
                                 valid_dataset_fobj.write(line)
                             else:
                                 if write_count <= self.max_write:
@@ -911,6 +1009,7 @@ def _split_traintestvalid(self, in_path):
                 train_fobj.write(line)
     os.chdir(wd)
 
+
 def _get_leaf_nodes(self, EC_nr):
     """Get the leaf nodes for the passed EC-nr.
 
@@ -921,7 +1020,8 @@ def _get_leaf_nodes(self, EC_nr):
       A list of filepaths for all the node ECs.
     """
     EC_nr_toplvls = [eclvl for eclvl in EC_nr if eclvl != '-']
-    depth = len(EC_nr) - len(EC_nr_toplvls) # how may iterations we need until we arrive at the leaf nodes
+    # how may iterations we need until we arrive at the leaf nodes
+    depth = len(EC_nr) - len(EC_nr_toplvls)
 
     # get the branch:
     curr_lvl_dict = self.class_to_id_EC
@@ -938,6 +1038,7 @@ def _get_leaf_nodes(self, EC_nr):
             file_path_list.append(item)
     return file_path_list
 
+
 def _iter_paths(tree, parent_path=()):
     """iterate over a three of paths.
     Helper function for get leaf nodes.k
@@ -950,13 +1051,14 @@ def _iter_paths(tree, parent_path=()):
       The leaf path for a current tree.
     """
     tree.default_factory = None
-    for path, node in tree.items():
+    for path, node in list(tree.items()):
         current_path = parent_path + (path,)
         if isinstance(node, Mapping):
             for inner_path in _iter_paths(node, current_path):
                 yield inner_path
         else:
             yield current_path
+
 
 def _recursively_default_dict():
     """Recursive default dict.
@@ -965,6 +1067,7 @@ def _recursively_default_dict():
       A dict mapped to the key.
     """
     return defaultdict(_recursively_default_dict)
+
 
 def _count_lines(file_path):
     """Most simple line count you can imagine.
@@ -978,6 +1081,7 @@ def _count_lines(file_path):
             count += 1
     return count
 
+
 class StratifiedDict(dict):
     def __missing__(self, key):
         self[key] = {'counts': 0,
@@ -986,6 +1090,7 @@ class StratifiedDict(dict):
                      }
         return self[key]
 
+
 class StratifiedDictFASTA(dict):
     def __missing__(self, key):
         self[key] = {'sp_id': '',
@@ -993,4 +1098,3 @@ class StratifiedDictFASTA(dict):
                      'bs_lvl': '',
                      }
         return self[key]
-
